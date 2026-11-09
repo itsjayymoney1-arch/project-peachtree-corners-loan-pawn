@@ -18,7 +18,14 @@ export function RouterProvider({ children }) {
     const path = window.location.pathname;
     // Check if path ends with any of our known routes
     const routes = [
+      '/vault',
       '/shop',
+      '/cart',
+      '/checkout',
+      '/order-confirmation',
+      '/account',
+      '/auth',
+      '/admin',
       '/jewelry',
       '/electronics',
       '/tools',
@@ -26,7 +33,8 @@ export function RouterProvider({ children }) {
       '/sell-to-us',
       '/pawn-loans',
       '/about',
-      '/contact'
+      '/contact',
+      '/unsubscribe'
     ];
     for (const r of routes) {
       if (path.endsWith(r)) return r;
