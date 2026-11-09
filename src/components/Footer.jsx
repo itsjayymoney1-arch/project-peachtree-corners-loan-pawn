@@ -8,8 +8,10 @@ import {
   Sparkles, 
   ShieldCheck, 
   ExternalLink,
-  Clock,
-  Compass
+  Flame,
+  ShoppingBag,
+  User,
+  KeyRound
 } from 'lucide-react';
 
 export default function Footer() {
@@ -21,6 +23,7 @@ export default function Footer() {
 
   return (
     <footer className="bg-luxury-black border-t border-luxury-gold/20 text-luxury-muted">
+      
       {/* Top Value Banner */}
       <div className="border-b border-luxury-borderSubtle bg-gradient-to-r from-luxury-black via-luxury-charcoal/40 to-luxury-black py-10 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
@@ -29,7 +32,7 @@ export default function Footer() {
               {STORE_INFO.tagline}
             </h3>
             <p className="text-sm text-luxury-muted mt-1 max-w-xl">
-              Discover exceptional jewelry, authenticated timepieces, commercial tools, and premium electronics in Peachtree Corners.
+              Discover verified fine jewelry, Swiss automatic chronographs, contractor-grade tools, and musical instruments in Peachtree Corners, GA.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3">
@@ -40,15 +43,13 @@ export default function Footer() {
               <Phone className="w-4 h-4" />
               <span>Call (678) 691-1692</span>
             </a>
-            <a
-              href={STORE_INFO.directionsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-sm border border-luxury-gold/50 text-luxury-gold font-medium text-xs uppercase tracking-wider hover:bg-luxury-gold/10 transition-all"
+            <button
+              onClick={() => navigate('/vault')}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-sm border border-luxury-gold text-luxury-gold font-medium text-xs uppercase tracking-wider hover:bg-luxury-gold/10 transition-all"
             >
-              <MapPin className="w-4 h-4" />
-              <span>Get Directions</span>
-            </a>
+              <Flame className="w-4 h-4" />
+              <span>Explore The Vault</span>
+            </button>
           </div>
         </div>
       </div>
@@ -68,13 +69,13 @@ export default function Footer() {
                   PEACHTREE CORNERS
                 </span>
                 <span className="block text-[11px] uppercase tracking-[0.25em] text-luxury-gold font-medium">
-                  LOAN & PAWN
+                  LOAN &amp; PAWN &bull; THE VAULT
                 </span>
               </div>
             </div>
 
             <p className="text-sm text-luxury-muted leading-relaxed max-w-sm">
-              Providing respectful, professional pawn loan services and an elevated retail discovery experience for jewelry, electronics, musical instruments, and contractor equipment.
+              Providing respectful collateral pawn loan services and an elevated retail discovery platform for fine estate jewelry, luxury watches, electronics, tools, and guitars.
             </p>
 
             <div className="pt-2 space-y-2 text-sm text-luxury-ivory">
@@ -98,22 +99,28 @@ export default function Footer() {
           {/* Department / Category Links */}
           <div className="space-y-3">
             <h4 className="text-xs uppercase tracking-widest font-semibold text-luxury-gold">
-              Merchandise
+              The Vault &bull; Shop
             </h4>
             <ul className="space-y-2 text-sm">
               <li>
+                <button onClick={() => navigate('/vault')} className="hover:text-luxury-ivory transition-colors flex items-center gap-1.5 text-luxury-goldLight font-medium">
+                  <Flame className="w-3.5 h-3.5 text-luxury-gold" />
+                  <span>The Vault (Live Drops)</span>
+                </button>
+              </li>
+              <li>
                 <button onClick={() => navigate('/jewelry')} className="hover:text-luxury-ivory transition-colors">
-                  Jewelry & Watches
+                  Jewelry &amp; Luxury Watches
                 </button>
               </li>
               <li>
                 <button onClick={() => navigate('/electronics')} className="hover:text-luxury-ivory transition-colors">
-                  Electronics & Tech
+                  Electronics &amp; Computing
                 </button>
               </li>
               <li>
                 <button onClick={() => navigate('/tools')} className="hover:text-luxury-ivory transition-colors">
-                  Tools & Equipment
+                  Tools &amp; Equipment
                 </button>
               </li>
               <li>
@@ -123,21 +130,37 @@ export default function Footer() {
               </li>
               <li>
                 <button onClick={() => navigate('/shop')} className="hover:text-luxury-ivory transition-colors">
-                  All Demonstration Items
+                  Showroom Catalog
                 </button>
               </li>
             </ul>
           </div>
 
-          {/* Customer Services Links */}
+          {/* Client Account & Services */}
           <div className="space-y-3">
             <h4 className="text-xs uppercase tracking-widest font-semibold text-luxury-gold">
-              Services
+              Client &amp; Services
             </h4>
             <ul className="space-y-2 text-sm">
               <li>
+                <button onClick={() => navigate('/account')} className="hover:text-luxury-ivory transition-colors flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-luxury-gold" />
+                  <span>Client Account</span>
+                </button>
+              </li>
+              <li>
+                <button onClick={() => navigate('/account?tab=orders')} className="hover:text-luxury-ivory transition-colors">
+                  Order Tracking
+                </button>
+              </li>
+              <li>
+                <button onClick={() => navigate('/account?tab=marketing')} className="hover:text-luxury-ivory transition-colors">
+                  Email &amp; SMS Preferences
+                </button>
+              </li>
+              <li>
                 <button onClick={() => navigate('/sell-to-us')} className="hover:text-luxury-ivory transition-colors">
-                  Sell to Us
+                  Sell Your Merchandise
                 </button>
               </li>
               <li>
@@ -152,60 +175,59 @@ export default function Footer() {
               </li>
               <li>
                 <button onClick={() => navigate('/contact')} className="hover:text-luxury-ivory transition-colors">
-                  Contact & Map
+                  Contact &amp; Map
                 </button>
-              </li>
-              <li>
-                <a 
-                  href={STORE_INFO.directionsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-luxury-ivory transition-colors inline-flex items-center gap-1"
-                >
-                  <span>Google Directions</span>
-                  <ExternalLink className="w-3 h-3 text-luxury-gold" />
-                </a>
               </li>
             </ul>
           </div>
 
-          {/* In-Store Visit Note */}
+          {/* Staff Access & In-Store Coordinates */}
           <div className="space-y-3">
             <h4 className="text-xs uppercase tracking-widest font-semibold text-luxury-gold">
-              Plan Your Visit
+              Store &amp; Operations
             </h4>
-            <p className="text-xs text-luxury-muted leading-relaxed">
-              Operating hours may vary during holidays. We encourage calling ahead to verify current hours or check specific merchandise before visiting:
-            </p>
-            <div className="p-3 rounded-sm bg-luxury-charcoal/70 border border-luxury-gold/20">
-              <span className="text-xs text-luxury-gold font-semibold block uppercase tracking-wider mb-1">
+            <div className="p-3.5 rounded-sm bg-luxury-charcoal/70 border border-luxury-gold/20 space-y-2">
+              <span className="text-xs text-luxury-gold font-semibold block uppercase tracking-wider">
                 Store Phone Line
               </span>
               <a href={STORE_INFO.phone.telLink} className="text-sm font-semibold text-luxury-ivory hover:text-luxury-gold">
                 {STORE_INFO.phone.formatted}
               </a>
-              <span className="block text-[11px] text-luxury-muted mt-1">
-                Located on Jimmy Carter Blvd
+              <span className="block text-[11px] text-luxury-muted">
+                7040 Jimmy Carter Blvd &bull; Suite 4
               </span>
+              <p className="text-[11px] text-luxury-muted pt-1">
+                Mon - Sat 9:30 AM - 6:00 PM
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => navigate('/admin')}
+                className="w-full py-2 px-3 rounded-sm bg-luxury-surface border border-luxury-gold/40 hover:border-luxury-gold text-luxury-gold hover:text-luxury-goldLight text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Store Staff Admin (/admin)</span>
+              </button>
             </div>
           </div>
 
         </div>
 
-        {/* Prototype & Legal Demonstration Disclosure */}
+        {/* Prototype & Legal Disclosure */}
         <div className="mt-12 pt-8 border-t border-luxury-borderSubtle">
           <div className="p-4 rounded-sm bg-luxury-charcoal/40 border border-luxury-gold/20 text-xs text-luxury-muted space-y-2">
             <div className="flex items-center gap-2 text-luxury-gold font-semibold uppercase tracking-wider text-[11px]">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Independent Digital Agency Demonstration Prototype</span>
+              <span>Full-Stack Digital Retail Architecture &bull; The Vault</span>
             </div>
             <p>
-              This website prototype was independently designed and developed as a visual and functional showcase for the ownership of Peachtree Corners Loan & Pawn. It does not replace or modify live store systems. All merchandise items listed are demonstration representations; visitors should contact the store directly at 678-691-1692 or visit in person at 7040 Jimmy Carter Blvd, Suite 4, Peachtree Corners, GA to verify current in-store selection, appraisal criteria, and pawn terms.
+              Peachtree Corners Loan &amp; Pawn: 7040 Jimmy Carter Boulevard, Suite 4, Peachtree Corners, GA 30092 &bull; Phone: (678) 691-1692. Regulated pawn services require physical in-person inspection and state ID. Retail merchandise is available for secure online acquisition or showroom pickup.
             </p>
           </div>
 
           <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
-            <p>© {new Date().getFullYear()} Peachtree Corners Loan & Pawn. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} Peachtree Corners Loan &amp; Pawn. All rights reserved.</p>
             <button
               onClick={scrollToTop}
               className="inline-flex items-center gap-1 text-luxury-gold hover:text-luxury-goldLight transition-colors"
