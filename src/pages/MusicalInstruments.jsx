@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useRouter } from '../context/RouterContext';
-import { DEMO_PRODUCTS } from '../data/inventory';
+import { useApp } from '../context/AppContext';
 import { STORE_INFO } from '../data/storeInfo';
 import ProductCard from '../components/ProductCard';
 import { 
@@ -15,9 +15,10 @@ import {
 
 export default function MusicalInstruments({ onSelectProduct, onInquireProduct }) {
   const { navigate } = useRouter();
+  const { products } = useApp();
   const [selectedSubcat, setSelectedSubcat] = useState('all');
 
-  const instProducts = DEMO_PRODUCTS.filter(p => p.category === 'instruments');
+  const instProducts = products.filter(p => p.category === 'instruments' && p.status !== 'draft' && p.status !== 'archived');
 
   const filtered = selectedSubcat === 'all'
     ? instProducts
