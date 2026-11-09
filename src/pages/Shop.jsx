@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useRouter } from '../context/RouterContext';
-import { DEMO_PRODUCTS, CATEGORIES } from '../data/inventory';
+import { useApp } from '../context/AppContext';
+import { CATEGORIES } from '../data/inventory';
 import { STORE_INFO } from '../data/storeInfo';
 import ProductCard from '../components/ProductCard';
 import { 
@@ -16,6 +17,7 @@ import {
 
 export default function Shop({ onSelectProduct, onInquireProduct }) {
   const { queryParams, navigate } = useRouter();
+  const { products } = useApp();
 
   // Category filter state
   const [selectedCategory, setSelectedCategory] = useState(queryParams.category || 'all');
@@ -34,7 +36,11 @@ export default function Shop({ onSelectProduct, onInquireProduct }) {
 
   // Filtered & Sorted products
   const filteredProducts = useMemo(() => {
-    return DEMO_PRODUCTS.filter(product => {
+    return products.filter(product => {
+      // Exclude draft or archived merchandise from customer view
+      if (product.status === 'draft' || product.status === 'archived') {
+        return false;
+      }
       // Category match
       if (selectedCategory !== 'all' && product.category !== selectedCategory) {
         return false;
@@ -42,10 +48,11 @@ export default function Shop({ onSelectProduct, onInquireProduct }) {
       // Search query match
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
-        const titleMatch = product.title.toLowerCase().includes(query);
+        const titleMatch = product.title?.toLowerCase().includes(query);
         const subMatch = product.subcategory?.toLowerCase().includes(query);
-        const descMatch = product.description.toLowerCase().includes(query);
-        if (!titleMatch && !subMatch && !descMatch) return false;
+        const descMatch = product.description?.toLowerCase().includes(query);
+        const brandMatch = product.brand?.toLowerCase().includes(query);
+        if (!titleMatch && !subMatch && !descMatch && !brandMatch) return false;
       }
       return true;
     }).sort((a, b) => {
@@ -55,14 +62,11 @@ export default function Shop({ onSelectProduct, onInquireProduct }) {
       if (sortBy === 'name') {
         return a.title.localeCompare(b.title);
       }
-      // Price parsing
-      const priceA = parseFloat(a.estimatedValue.replace(/[^0-9.]/g, '')) || 0;
-      const priceB = parseFloat(b.estimatedValue.replace(/[^0-9.]/g, '')) || 0;
-      if (sortBy === 'price-low') return priceA - priceB;
-      if (sortBy === 'price-high') return priceB - priceA;
+      if (sortBy === 'price-low') return a.price - b.price;
+      if (sortBy === 'price-high') return b.price - a.price;
       return 0;
     });
-  }, [selectedCategory, searchQuery, sortBy]);
+  }, [products, selectedCategory, searchQuery, sortBy]);
 
   const clearFilters = () => {
     setSelectedCategory('all');

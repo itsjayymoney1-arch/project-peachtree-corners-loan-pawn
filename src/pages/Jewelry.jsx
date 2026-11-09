@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useRouter } from '../context/RouterContext';
-import { DEMO_PRODUCTS } from '../data/inventory';
+import { useApp } from '../context/AppContext';
 import { STORE_INFO } from '../data/storeInfo';
 import ProductCard from '../components/ProductCard';
 import { 
@@ -17,9 +17,10 @@ import {
 
 export default function Jewelry({ onSelectProduct, onInquireProduct }) {
   const { navigate } = useRouter();
+  const { products } = useApp();
   const [selectedSubcat, setSelectedSubcat] = useState('all');
 
-  const jewelryProducts = DEMO_PRODUCTS.filter(p => p.category === 'jewelry');
+  const jewelryProducts = products.filter(p => p.category === 'jewelry' && p.status !== 'draft' && p.status !== 'archived');
 
   const filtered = selectedSubcat === 'all'
     ? jewelryProducts
