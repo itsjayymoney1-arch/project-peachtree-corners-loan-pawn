@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useRouter } from '../context/RouterContext';
-import { DEMO_PRODUCTS } from '../data/inventory';
+import { useApp } from '../context/AppContext';
 import { STORE_INFO } from '../data/storeInfo';
 import ProductCard from '../components/ProductCard';
 import { 
@@ -18,9 +18,10 @@ import {
 
 export default function Electronics({ onSelectProduct, onInquireProduct }) {
   const { navigate } = useRouter();
+  const { products } = useApp();
   const [selectedSubcat, setSelectedSubcat] = useState('all');
 
-  const elecProducts = DEMO_PRODUCTS.filter(p => p.category === 'electronics');
+  const elecProducts = products.filter(p => p.category === 'electronics' && p.status !== 'draft' && p.status !== 'archived');
 
   const filtered = selectedSubcat === 'all'
     ? elecProducts
