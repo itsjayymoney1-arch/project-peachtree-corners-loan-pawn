@@ -564,7 +564,29 @@ export const dbService = {
         localStorage.setItem(DB_STORAGE_KEY, JSON.stringify(initial));
         return initial;
       }
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      // Auto-reconcile new tables if missing from previous version
+      let changed = false;
+      if (!parsed.promotions) {
+        parsed.promotions = INITIAL_PROMOTIONS;
+        changed = true;
+      }
+      if (!parsed.categories) {
+        parsed.categories = INITIAL_CATEGORIES;
+        changed = true;
+      }
+      if (!parsed.settings) {
+        parsed.settings = INITIAL_SETTINGS;
+        changed = true;
+      }
+      if (!parsed.suppressionList) {
+        parsed.suppressionList = [];
+        changed = true;
+      }
+      if (changed) {
+        localStorage.setItem(DB_STORAGE_KEY, JSON.stringify(parsed));
+      }
+      return parsed;
     } catch (e) {
       console.warn("Storage access fallback to default database", e);
       return createDefaultDatabase();
