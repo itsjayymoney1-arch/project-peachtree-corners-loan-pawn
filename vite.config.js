@@ -3,9 +3,12 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: './', // enables relative asset resolution on any hosting path
+  base: './', // relative asset paths for safe deployment
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    rollupOptions: {
+      input: 'index.src.html'
+    }
   }
 });
