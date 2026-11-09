@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from './context/RouterContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import CartDrawer from './components/CartDrawer';
 import ProductModal from './components/ProductModal';
 import InquiryModal from './components/InquiryModal';
 
 // Pages
 import Home from './pages/Home';
+import Vault from './pages/Vault';
 import Shop from './pages/Shop';
 import Jewelry from './pages/Jewelry';
 import Electronics from './pages/Electronics';
@@ -16,6 +18,13 @@ import SellToUs from './pages/SellToUs';
 import PawnLoans from './pages/PawnLoans';
 import About from './pages/About';
 import Contact from './pages/Contact';
+
+// Commerce & Admin Pages
+import Checkout from './pages/Checkout';
+import OrderConfirmation from './pages/OrderConfirmation';
+import Account from './pages/Account';
+import Auth from './pages/Auth';
+import Admin from './pages/Admin';
 
 export default function App() {
   const { currentPath, navigate } = useRouter();
@@ -31,9 +40,34 @@ export default function App() {
     let desc = "Explore quality jewelry, electronics, tools, musical instruments, and specialty merchandise at Peachtree Corners Loan & Pawn.";
 
     switch (currentPath) {
+      case '/vault':
+        title = "THE VAULT: Just Came In | Peachtree Corners Loan & Pawn";
+        desc = "Discover what's new before somebody else does. Live estate jewelry, Swiss watches, contractor equipment, and new arrivals in Peachtree Corners, GA.";
+        break;
+      case '/checkout':
+      case '/cart':
+        title = "Secure Checkout | Peachtree Corners Loan & Pawn";
+        desc = "Complete your secure order with in-store counter pickup or insured shipping.";
+        break;
+      case '/order-confirmation':
+        title = "Order Confirmed | Peachtree Corners Loan & Pawn";
+        desc = "Thank you for your order. View your confirmation receipt and in-store pickup details.";
+        break;
+      case '/account':
+        title = "Client Account & Orders | Peachtree Corners Loan & Pawn";
+        desc = "Manage order history, fulfillment tracking, and Vault Weekly subscription preferences.";
+        break;
+      case '/auth':
+        title = "Client Sign In & Registration | Peachtree Corners Loan & Pawn";
+        desc = "Sign in or create your client profile for fast checkout and drop alerts.";
+        break;
+      case '/admin':
+        title = "Staff Administration & Inventory Platform | Peachtree Corners Loan & Pawn";
+        desc = "Executive retail commerce dashboard, inventory intake, orders, and marketing management.";
+        break;
       case '/shop':
         title = "Browse Showroom Catalog | Peachtree Corners Loan & Pawn";
-        desc = "Explore our demonstration inventory of fine jewelry, electronics, contractor equipment, and musical instruments.";
+        desc = "Explore our verified inventory of fine jewelry, electronics, contractor equipment, and musical instruments.";
         break;
       case '/jewelry':
         title = "Fine Jewelry & Luxury Watches | Peachtree Corners Loan & Pawn";
@@ -98,6 +132,19 @@ export default function App() {
   // Route renderer
   const renderCurrentPage = () => {
     switch (currentPath) {
+      case '/vault':
+        return <Vault onSelectProduct={handleSelectProduct} onInquireProduct={handleInquireProduct} />;
+      case '/cart':
+      case '/checkout':
+        return <Checkout />;
+      case '/order-confirmation':
+        return <OrderConfirmation />;
+      case '/account':
+        return <Account />;
+      case '/auth':
+        return <Auth />;
+      case '/admin':
+        return <Admin />;
       case '/shop':
         return <Shop onSelectProduct={handleSelectProduct} onInquireProduct={handleInquireProduct} />;
       case '/jewelry':
@@ -122,15 +169,20 @@ export default function App() {
     }
   };
 
+  const isAdminRoute = currentPath === '/admin';
+
   return (
     <div className="min-h-screen flex flex-col bg-luxury-black text-luxury-ivory selection:bg-luxury-gold selection:text-luxury-black font-sans">
-      <Header />
+      {!isAdminRoute && <Header />}
 
       <main className="flex-1 w-full">
         {renderCurrentPage()}
       </main>
 
-      <Footer />
+      {!isAdminRoute && <Footer />}
+
+      {/* Global Shopping Bag Slide-Over Drawer */}
+      <CartDrawer />
 
       {/* Global Product Quick View Modal */}
       {selectedProduct && (
