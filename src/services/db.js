@@ -343,6 +343,131 @@ function generateInitialCampaigns() {
   ];
 }
 
+// Recurring Vault Promotional drops configuration
+export const INITIAL_PROMOTIONS = [
+  {
+    id: 'promo-mon',
+    title: 'Monday Fresh Finds',
+    dayOfWeek: 'Monday',
+    tagline: 'First Look at Weekend Acquisitions',
+    description: 'First look at weekend appraisal acquisitions. Live estate gold, diamond solitaires, and precision tools cataloged before general showroom display.',
+    active: true,
+    bannerColor: '#C5A15A',
+    scheduleTime: 'Every Monday at 10:00 AM EST',
+    featuredCategories: ['jewelry', 'tools'],
+    discountNote: 'Showroom Verified Value',
+    badgeText: 'MONDAY DROP'
+  },
+  {
+    id: 'promo-wed',
+    title: 'Wednesday Under-the-Radar Deals',
+    dayOfWeek: 'Wednesday',
+    tagline: 'Staff Curated Tech & Studio Gear',
+    description: 'Staff-curated specialty finds and value discoveries in inspected electronics, contractor equipment, and studio audio gear.',
+    active: true,
+    bannerColor: '#A7A7A7',
+    scheduleTime: 'Every Wednesday at 12:00 PM EST',
+    featuredCategories: ['electronics', 'instruments'],
+    discountNote: 'Value Worth Discovering',
+    badgeText: 'MIDWEEK SPECIAL'
+  },
+  {
+    id: 'promo-fri',
+    title: 'Friday Vault Drop',
+    dayOfWeek: 'Friday',
+    tagline: 'Marquee High-End Estate Release',
+    description: 'Our marquee weekly drop: High-end Swiss timepieces, solid 14K & 18K gold Cuban link chains, and premium contractor tool combos.',
+    active: true,
+    bannerColor: '#DFBE76',
+    scheduleTime: 'Every Friday at 2:00 PM EST',
+    featuredCategories: ['jewelry', 'tools', 'collectibles'],
+    discountNote: 'Marquee Weekly Event',
+    badgeText: 'SIGNATURE DROP'
+  },
+  {
+    id: 'promo-sat',
+    title: 'Saturday Treasure Hunt',
+    dayOfWeek: 'Saturday',
+    tagline: 'In-Store Showcase Discovery',
+    description: 'In-person discovery event at 7040 Jimmy Carter Blvd. Walk our showcase floor for newly uncrated estate items and rare collectibles.',
+    active: true,
+    bannerColor: '#E2C37A',
+    scheduleTime: 'Every Saturday at 9:30 AM EST',
+    featuredCategories: ['jewelry', 'collectibles', 'instruments'],
+    discountNote: 'In-Person Showcase Preview',
+    badgeText: 'SATURDAY IN-STORE'
+  }
+];
+
+export const INITIAL_CATEGORIES = [
+  {
+    id: 'jewelry',
+    name: 'Fine Jewelry & Luxury Watches',
+    slug: 'jewelry',
+    description: 'Curated solid gold chains, diamond solitaire rings, engagement bands, and verified luxury timepieces.',
+    itemCount: '50+ rotating items',
+    active: true,
+    requiresInspectionNotice: true
+  },
+  {
+    id: 'electronics',
+    name: 'Modern Electronics & Tech',
+    slug: 'electronics',
+    description: 'Inspected smartphones, premium laptops, noise-canceling headphones, 4K displays, and modern gaming consoles.',
+    itemCount: 'Daily tested units',
+    active: true,
+    requiresInspectionNotice: true
+  },
+  {
+    id: 'tools',
+    name: 'Tools & Contractor Equipment',
+    slug: 'tools',
+    description: 'Commercial grade cordless brushless combo kits, heavy-duty compressors, diagnostic tools, and workshop gear.',
+    itemCount: 'Commercial contractor stock',
+    active: true,
+    requiresInspectionNotice: true
+  },
+  {
+    id: 'instruments',
+    name: 'Musical Instruments & Pro Audio',
+    slug: 'musical-instruments',
+    description: 'Electric and acoustic guitars, keyboards, studio amplifiers, pro audio mixers, and performance gear.',
+    itemCount: 'Studio & stage verified',
+    active: true,
+    requiresInspectionNotice: true
+  },
+  {
+    id: 'collectibles',
+    name: 'Collectibles & Specialty Finds',
+    slug: 'collectibles',
+    description: 'Vintage numismatics, rare coins, collectible timepieces, sports memorabilia, and unique curiosities.',
+    itemCount: 'Unique estate finds',
+    active: true,
+    requiresInspectionNotice: true
+  }
+];
+
+export const INITIAL_SETTINGS = {
+  storeName: STORE_INFO.name,
+  address: STORE_INFO.address.full,
+  phone: STORE_INFO.phone.formatted,
+  email: 'info@pawnshopnorcross.com',
+  website: STORE_INFO.existingWebsite,
+  hours: 'Monday – Saturday: 9:30 AM – 6:00 PM | Sunday: Closed',
+  salesTaxRate: 0.06,
+  flatShippingRate: 35.00,
+  paymentProcessor: 'Square Sandbox (Simulated)',
+  paymentProcessorStatus: 'sandbox_active',
+  paymentProcessorUnderwritingNeeded: true,
+  posIntegrationType: 'Bravo Pawn POS / Manual Counter Sync',
+  posLastSync: '2026-11-09T08:30:00Z',
+  smsProvider: 'Twilio Gateway (Simulated)',
+  emailProvider: 'SendGrid / SMTP (Simulated)',
+  reviewPlatformUrl: `${STORE_INFO.existingWebsite}#reviews`,
+  reviewDelayHours: 48,
+  requireGovIdOnPickup: true
+};
+
 // Initial database state
 function createDefaultDatabase() {
   return {
@@ -351,6 +476,10 @@ function createDefaultDatabase() {
     orders: generateInitialOrders(),
     admins: INITIAL_ADMINS,
     customers: INITIAL_CUSTOMERS,
+    promotions: INITIAL_PROMOTIONS,
+    categories: INITIAL_CATEGORIES,
+    settings: INITIAL_SETTINGS,
+    suppressionList: [],
     adminInvites: [
       {
         id: 'inv-01',
