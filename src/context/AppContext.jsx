@@ -719,6 +719,158 @@ export function AppProvider({ children }) {
     return newCamp;
   }, [checkPermission, currentAdmin, reloadDb]);
 
+  // Markdown Engine Methods
+  const runMarkdownEngine = useCallback(async () => {
+    if (!checkPermission('manage_inventory')) {
+      throw new Error('Unauthorized: insufficient permissions to run markdown engine.');
+    }
+    
+    const freshDb = dbService.getSnapshot();
+    const settings = freshDb.settings?.markdownSettings || {
+      enabled: true,
+      requireApproval: false,
+      tiers: DEFAULT_MARKDOWN_TIERS,
+      excludedProductIds: [],
+      excludedCategories: [],
+    };
+    
+    if (!settings.enabled) {
+      return { processed: 0, changed: 0, message: 'Markdown engine is disabled.' };
+    }
+    
+    const eligibleProducts = freshDb.products || [];
+    const results = markdownEngineRun(eligibleProducts, settings);
+    
+    let changedCount = 0;
+    results.forEach(result => {
+      if (result.changed) {
+        const idx = freshDb.products.findIndex(p => p.id === result.productId);
+        if (idx !== -1) {
+          const product = freshDb.products[idx];
+          // Add to markdown history
+          const historyEntry = {
+            date: new Date().toISOString(),
+            fromPrice: result.previousPrice,
+            toPrice: result.newPrice,
+            discountPercent: result.discountPercent,
+            tier: result.tier,
+            appliedBy: 'system_markdown_engine',
+          };
+          freshDb.products[idx] = {
+            ...product,
+            price: result.newPrice,
+            currentDiscountPercent: result.discountPercent,
+            currentMarkdownTier: result.tier,
+            markdownHistory: [...(product.markdownHistory || []), historyEntry],
+            updatedAt: new Date().toISOString(),
+          };
+          changedCount++;
+          
+          // Log audit
+          dbService.logAudit(
+            currentAdmin || { id: 'system', email: 'system', role: 'SYSTEM' },
+            'MARKDOWN_PRICE_UPDATE',
+            'product',
+            result.productId,
+            { 
+              previousPrice: result.previousPrice, 
+              newPrice: result.newPrice, 
+              discountPercent: result.discountPercent,
+              reason: result.reason 
+            }
+          );
+        }
+      }
+    });
+    
+    // Update lastRunAt
+    if (!freshDb.settings) freshDb.settings = {};
+    if (!freshDb.settings.markdownSettings) freshDb.settings.markdownSettings = settings;
+    freshDb.settings.markdownSettings.lastRunAt = new Date().toISOString();
+    freshDb.settings.markdownSettings.lastRunBy = currentAdmin?.email || 'system';
+    
+    dbService.saveSnapshot(freshDb);
+    reloadDb();
+    
+    return { processed: results.length, changed: changedCount };
+  }, [checkPermission, currentAdmin, reloadDb]);
+
+  const getMarkdownSettings = useCallback(() => {
+    const freshDb = dbService.getSnapshot();
+    return freshDb.settings?.markdownSettings || {
+      enabled: true,
+      requireApproval: false,
+      tiers: DEFAULT_MARKDOWN_TIERS,
+      excludedProductIds: [],
+      excludedCategories: [],
+    };
+  }, []);
+
+  const updateMarkdownSettings = useCallback((newSettings) => {
+    if (!checkPermission('manage_inventory')) {
+      throw new Error('Unauthorized');
+    }
+    const freshDb = dbService.getSnapshot();
+    if (!freshDb.settings) freshDb.settings = {};
+    freshDb.settings.markdownSettings = { ...freshDb.settings.markdownSettings, ...newSettings };
+    dbService.saveSnapshot(freshDb);
+    reloadDb();
+    
+    dbService.logAudit(
+      currentAdmin,
+      'MARKDOWN_SETTINGS_UPDATE',
+      'system',
+      'markdown_settings',
+      newSettings
+    );
+  }, [checkPermission, currentAdmin, reloadDb]);
+
+  const getAgingReport = useCallback(() => {
+    const freshDb = dbService.getSnapshot();
+    const settings = freshDb.settings?.markdownSettings || {
+      enabled: true,
+      tiers: DEFAULT_MARKDOWN_TIERS,
+      excludedProductIds: [],
+      excludedCategories: [],
+    };
+    return getInventoryAgingStats(freshDb.products || [], settings);
+  }, []);
+
+  const overrideProductPrice = useCallback((productId, newPrice, reason) => {
+    if (!checkPermission('manage_inventory')) throw new Error('Unauthorized');
+    const freshDb = dbService.getSnapshot();
+    const idx = freshDb.products.findIndex(p => p.id === productId);
+    if (idx === -1) throw new Error('Product not found');
+    
+    const product = freshDb.products[idx];
+    const historyEntry = {
+      date: new Date().toISOString(),
+      fromPrice: product.price,
+      toPrice: parseFloat(newPrice),
+      discountPercent: product.originalApprovedPrice ? 
+        Math.round((1 - parseFloat(newPrice) / product.originalApprovedPrice) * 100) : 0,
+      tier: 'manual_override',
+      appliedBy: currentAdmin?.email || 'staff',
+      reason: reason || 'Manual price override',
+    };
+    
+    freshDb.products[idx] = {
+      ...product,
+      price: parseFloat(newPrice),
+      markdownHistory: [...(product.markdownHistory || []), historyEntry],
+      updatedAt: new Date().toISOString(),
+    };
+    
+    dbService.saveSnapshot(freshDb);
+    reloadDb();
+    
+    dbService.logAudit(currentAdmin, 'PRICE_OVERRIDE', 'product', productId, {
+      previousPrice: product.price,
+      newPrice: parseFloat(newPrice),
+      reason,
+    });
+  }, [checkPermission, currentAdmin, reloadDb]);
+
   // Reset database to default seed
   const resetDemoData = useCallback(() => {
     const fresh = dbService.resetToDefault();
