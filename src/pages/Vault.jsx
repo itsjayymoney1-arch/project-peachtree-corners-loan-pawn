@@ -98,6 +98,8 @@ export default function Vault({ onSelectProduct, onInquireProduct }) {
     });
   }, [products, activeTab, searchQuery, sortBy]);
 
+  const priceDropProducts = filteredProducts.filter(p => (p.currentDiscountPercent ?? 0) > 0);
+
   const handleSubscribe = async (e) => {
     e.preventDefault();
     setSubError('');
@@ -221,6 +223,20 @@ export default function Vault({ onSelectProduct, onInquireProduct }) {
           </div>
         </div>
       </section>
+
+      {/* VAULT SPOTLIGHT — Price Drops */}
+      {priceDropProducts.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-8 p-4 border border-luxury-gold/30 rounded-sm bg-luxury-gold/5">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingDown className="w-4 h-4 text-luxury-gold" />
+              <span className="text-luxury-gold font-bold uppercase tracking-widest text-xs">Fresh Price Drops in The Vault</span>
+              <span className="ml-auto text-luxury-muted text-xs">{priceDropProducts.length} item{priceDropProducts.length !== 1 ? 's' : ''} reduced</span>
+            </div>
+            <p className="text-luxury-muted text-xs">Items that have been with us longer are priced to move. Shop before they're gone.</p>
+          </div>
+        </section>
+      )}
 
       {/* 3. FILTER CONTROLS & SEARCH */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">

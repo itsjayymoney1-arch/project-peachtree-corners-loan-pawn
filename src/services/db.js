@@ -1,6 +1,7 @@
 // Core Database and Persistence Service for Peachtree Corners Loan & Pawn - THE VAULT
 import { DEMO_PRODUCTS } from '../data/inventory';
 import { STORE_INFO } from '../data/storeInfo';
+import { DEFAULT_MARKDOWN_TIERS } from './markdownEngine.js';
 
 const DB_STORAGE_KEY = 'pc_vault_database_v2';
 
@@ -159,7 +160,15 @@ function generateInitialProducts() {
       createdBy: 'admin-owner-01',
       modifiedBy: 'admin-inv-02',
       createdAt: dateAdded,
-      updatedAt: dateAdded
+      updatedAt: dateAdded,
+      // Markdown / aging fields
+      inventoryArrivalDate: dateAdded,
+      originalApprovedPrice: numPrice,
+      minimumPrice: null,
+      markdownPaused: false,
+      markdownHistory: [],
+      currentMarkdownTier: 'tier-0',
+      currentDiscountPercent: 0,
     };
   });
 }
@@ -478,7 +487,20 @@ function createDefaultDatabase() {
     customers: INITIAL_CUSTOMERS,
     promotions: INITIAL_PROMOTIONS,
     categories: INITIAL_CATEGORIES,
-    settings: INITIAL_SETTINGS,
+    settings: {
+      ...INITIAL_SETTINGS,
+      markdownSettings: {
+        enabled: true,
+        requireApproval: false,
+        tiers: DEFAULT_MARKDOWN_TIERS,
+        excludedProductIds: [],
+        excludedCategories: [],
+        categoryOverrides: {},
+        businessTimezone: 'America/New_York',
+        lastRunAt: null,
+        lastRunBy: 'system',
+      },
+    },
     suppressionList: [],
     adminInvites: [
       {
@@ -581,6 +603,24 @@ export const dbService = {
       }
       if (!parsed.suppressionList) {
         parsed.suppressionList = [];
+        changed = true;
+      }
+      if (!parsed.settings) {
+        parsed.settings = { ...INITIAL_SETTINGS };
+        changed = true;
+      }
+      if (!parsed.settings.markdownSettings) {
+        parsed.settings.markdownSettings = {
+          enabled: true,
+          requireApproval: false,
+          tiers: DEFAULT_MARKDOWN_TIERS,
+          excludedProductIds: [],
+          excludedCategories: [],
+          categoryOverrides: {},
+          businessTimezone: 'America/New_York',
+          lastRunAt: null,
+          lastRunBy: 'system',
+        };
         changed = true;
       }
       if (changed) {
