@@ -605,10 +605,6 @@ export const dbService = {
         parsed.suppressionList = [];
         changed = true;
       }
-      if (!parsed.settings) {
-        parsed.settings = { ...INITIAL_SETTINGS };
-        changed = true;
-      }
       if (!parsed.settings.markdownSettings) {
         parsed.settings.markdownSettings = {
           enabled: true,

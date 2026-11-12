@@ -3,6 +3,7 @@ import { dbService } from '../services/db';
 import { emailService } from '../services/emailService';
 import { smsService } from '../services/smsService';
 import { paymentAdapter } from '../services/paymentAdapter';
+import { runMarkdownEngine as markdownEngineRun, getInventoryAgingStats, DEFAULT_MARKDOWN_TIERS } from '../services/markdownEngine';
 
 const AppContext = createContext(null);
 
@@ -236,7 +237,7 @@ export function AppProvider({ children }) {
 
     // INVENTORY_MANAGER
     if (role === 'INVENTORY_MANAGER') {
-      const allowed = ['view_inventory', 'create_product', 'edit_product', 'archive_product', 'record_instore_sale', 'smart_intake'];
+      const allowed = ['view_inventory', 'create_product', 'edit_product', 'archive_product', 'record_instore_sale', 'smart_intake', 'manage_inventory', 'manage_markdown', 'run_markdown_engine'];
       return allowed.includes(permissionKey);
     }
 
