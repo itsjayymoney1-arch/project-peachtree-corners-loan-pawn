@@ -11,6 +11,20 @@ export default function ProductCard({ product, onSelectProduct, onInquireProduct
     ? `$${product.price.toLocaleString()}` 
     : (product.estimatedValue || '$0');
 
+  // Discount / markdown logic
+  const hasDiscount = (product.currentDiscountPercent ?? 0) > 0;
+  const pct = product.currentDiscountPercent ?? 0;
+  const discountLabel = pct >= 20 ? 'LAST CHANCE'
+                      : pct >= 15 ? 'VAULT PRICE DROP'
+                      : pct >= 5  ? 'RECENTLY REDUCED'
+                      : null;
+  const currentPrice = product.price
+    ? product.price.toLocaleString()
+    : (product.estimatedValue || '0');
+  const originalPrice = product.originalApprovedPrice
+    ? product.originalApprovedPrice.toLocaleString()
+    : currentPrice;
+
   const handleQuickAdd = (e) => {
     e.stopPropagation();
     if (isSold || isReserved) return;
@@ -67,8 +81,22 @@ export default function ProductCard({ product, onSelectProduct, onInquireProduct
           )}
         </div>
 
-        {/* Condition Tag */}
-        {product.condition && (
+        {/* Discount Badge (top-right) */}
+        {hasDiscount && (
+          <div className="absolute top-2.5 right-2.5 z-10 flex flex-col items-end gap-1">
+            <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase rounded-full bg-emerald-900/90 text-emerald-300 border border-emerald-600/50">
+              −{pct}%
+            </span>
+            {discountLabel && (
+              <span className="px-2 py-0.5 text-[9px] font-bold tracking-wider uppercase rounded-full bg-emerald-900/80 text-emerald-400 border border-emerald-600/40">
+                {discountLabel}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Condition Tag (top-right, only when no discount) */}
+        {!hasDiscount && product.condition && (
           <div className="absolute top-2.5 right-2.5 z-10">
             <span className="px-2 py-0.5 rounded-full text-[10px] font-medium tracking-wide bg-luxury-charcoal/90 text-luxury-ivory border border-white/10 backdrop-blur-sm">
               {product.condition}
@@ -123,9 +151,17 @@ export default function ProductCard({ product, onSelectProduct, onInquireProduct
             <span className="text-[10px] uppercase tracking-wider text-luxury-muted block">
               {isSold ? 'Sold Price' : 'Store Price'}
             </span>
-            <span className={`font-editorial text-lg sm:text-xl font-bold ${isSold ? 'text-luxury-muted line-through' : 'text-luxury-gold'}`}>
-              {displayPrice}
-            </span>
+            {hasDiscount && !isSold ? (
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="font-editorial text-lg font-bold text-luxury-gold">${currentPrice}</span>
+                <span className="text-luxury-muted text-xs line-through">${originalPrice}</span>
+                <span className="text-xs font-bold text-emerald-400">−{pct}%</span>
+              </div>
+            ) : (
+              <span className={`font-editorial text-lg sm:text-xl font-bold ${isSold ? 'text-luxury-muted line-through' : 'text-luxury-gold'}`}>
+                {displayPrice}
+              </span>
+            )}
           </div>
 
           {!isSold && !isReserved ? (
