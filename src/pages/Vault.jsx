@@ -15,7 +15,8 @@ import {
   CheckCircle2, 
   SlidersHorizontal,
   X,
-  AlertCircle
+  AlertCircle,
+  TrendingDown
 } from 'lucide-react';
 
 export default function Vault({ onSelectProduct, onInquireProduct }) {
@@ -38,6 +39,9 @@ export default function Vault({ onSelectProduct, onInquireProduct }) {
     { id: 'all', label: 'All Vault Merchandise' },
     { id: 'new_arrivals', label: 'Just Came In (New Arrivals)', icon: Sparkles },
     { id: 'weekly_drops', label: 'Weekly Vault Drops', icon: Flame },
+    { id: 'price_drops', label: 'Price Drops', icon: TrendingDown },
+    { id: 'last_chance', label: 'Last Chance', icon: Flame },
+    { id: 'recently_reduced', label: 'Recently Reduced', icon: Clock },
     { id: 'jewelry', label: 'Estate Jewelry & Watches' },
     { id: 'tools', label: 'Contractor Equipment' },
     { id: 'electronics', label: 'Inspected Tech' },
@@ -59,6 +63,9 @@ export default function Vault({ onSelectProduct, onInquireProduct }) {
       if (activeTab === 'tools' && product.category !== 'tools') return false;
       if (activeTab === 'electronics' && product.category !== 'electronics') return false;
       if (activeTab === 'instruments' && product.category !== 'instruments') return false;
+      if (activeTab === 'price_drops' && !(product.currentDiscountPercent > 0)) return false;
+      if (activeTab === 'last_chance' && !(product.currentDiscountPercent >= 20)) return false;
+      if (activeTab === 'recently_reduced' && !(product.currentDiscountPercent >= 5 && product.currentDiscountPercent < 20)) return false;
 
       // Search matching
       if (searchQuery.trim()) {
