@@ -136,6 +136,18 @@
       "created_at": "2026-11-12T15:35:34.824Z",
       "sender": "ios",
       "is_cancelled": false
+    },
+    {
+      "id": "09bd0a50-c6e6-4e5b-9521-05254a81dc47",
+      "role": "agent",
+      "content": "Your weekly Google allowance for this model is used up.\nIt comes back in about 7 days.\nTwo ways to keep going now:\n- Pick another model in the app — each family has its own allowance, and the picker shows what's left.\n- Get more from Google: https://antigravity.google/g1-upgrade",
+      "status": "error",
+      "model": "claude-sonnet-4-6",
+      "client_type": "gemini-bridge",
+      "parent_message_id": "ae337169-b7f3-47e4-b78b-59d7e6313a2c",
+      "created_at": "2026-11-12T16:05:37.270Z",
+      "sender": "macOS",
+      "is_cancelled": false
     }
   ]
 }
