@@ -39,9 +39,19 @@ export default function ProductModal({ product, onClose, onInquire }) {
 
   const isSold = product.status === 'sold';
   const isReserved = product.status === 'reserved';
-  const displayPrice = product.price 
-    ? `$${product.price.toLocaleString()}` 
+  const hasDiscount = (product.currentDiscountPercent ?? 0) > 0;
+  const pct = product.currentDiscountPercent ?? 0;
+  const discountLabel = pct >= 20 ? 'LAST CHANCE'
+                      : pct >= 15 ? 'VAULT PRICE DROP'
+                      : pct >= 5  ? 'RECENTLY REDUCED'
+                      : null;
+  const currentPriceFormatted = product.price != null
+    ? `$${product.price.toLocaleString()}`
     : (product.estimatedValue || '$0');
+  const originalPriceFormatted = product.originalApprovedPrice != null
+    ? `$${product.originalApprovedPrice.toLocaleString()}`
+    : currentPriceFormatted;
+  const displayPrice = currentPriceFormatted;
 
   const handleAddToCart = () => {
     if (isSold || isReserved) return;
@@ -163,9 +173,26 @@ export default function ProductModal({ product, onClose, onInquire }) {
                   <span className="text-[11px] uppercase tracking-wider text-luxury-muted block">
                     {isSold ? 'Sold Price' : 'Actual Store Price'}
                   </span>
-                  <span className={`font-editorial text-3xl font-bold ${isSold ? 'text-luxury-muted line-through' : 'text-luxury-gold'}`}>
-                    {displayPrice}
-                  </span>
+                  {hasDiscount && !isSold ? (
+                    <div className="space-y-1">
+                      <div className="flex items-baseline gap-2.5 flex-wrap">
+                        <span className="font-editorial text-3xl font-bold text-luxury-gold">{currentPriceFormatted}</span>
+                        <span className="text-luxury-muted text-sm line-through">{originalPriceFormatted}</span>
+                        <span className="px-2 py-0.5 text-xs font-bold uppercase rounded-full bg-emerald-900/90 text-emerald-300 border border-emerald-600/50">
+                          −{pct}%
+                        </span>
+                      </div>
+                      {discountLabel && (
+                        <span className="inline-block px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-emerald-900/70 text-emerald-400 border border-emerald-600/40">
+                          {discountLabel}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className={`font-editorial text-3xl font-bold ${isSold ? 'text-luxury-muted line-through' : 'text-luxury-gold'}`}>
+                      {displayPrice}
+                    </span>
+                  )}
                 </div>
                 
                 <div className="text-right">
