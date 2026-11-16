@@ -18,12 +18,21 @@ export default function Tools({ onSelectProduct, onInquireProduct }) {
   const { navigate } = useRouter();
   const { products } = useApp();
   const [selectedSubcat, setSelectedSubcat] = useState('all');
+  const [priceRange, setPriceRange] = useState('all');
 
   const toolProducts = products.filter(p => p.category === 'tools' && p.status !== 'draft' && p.status !== 'archived');
 
-  const filtered = selectedSubcat === 'all'
-    ? toolProducts
-    : toolProducts.filter(p => p.subcategory?.toLowerCase().includes(selectedSubcat.toLowerCase()));
+  const filtered = toolProducts.filter(p => {
+    if (selectedSubcat !== 'all' && !p.subcategory?.toLowerCase().includes(selectedSubcat.toLowerCase())) {
+      return false;
+    }
+    const price = p.price || 0;
+    if (priceRange === 'under-100' && price >= 100) return false;
+    if (priceRange === '100-250' && (price < 100 || price > 250)) return false;
+    if (priceRange === '250-500' && (price < 250 || price > 500)) return false;
+    if (priceRange === 'over-500' && price <= 500) return false;
+    return true;
+  });
 
   const subcategories = [
     { id: 'all', label: 'All Tools' },
@@ -31,6 +40,14 @@ export default function Tools({ onSelectProduct, onInquireProduct }) {
     { id: 'saw', label: 'Power Saws & Miter' },
     { id: 'diagnostic', label: 'Laser & Diagnostic' },
     { id: 'pneumatic', label: 'Compressors & Pneumatics' },
+  ];
+
+  const priceRanges = [
+    { id: 'all', label: 'All Prices' },
+    { id: 'under-100', label: 'Under $100' },
+    { id: '100-250', label: '$100 – $250' },
+    { id: '250-500', label: '$250 – $500' },
+    { id: 'over-500', label: '$500+' },
   ];
 
   return (
@@ -110,20 +127,35 @@ export default function Tools({ onSelectProduct, onInquireProduct }) {
             </h2>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {subcategories.map(sub => (
-              <button
-                key={sub.id}
-                onClick={() => setSelectedSubcat(sub.id)}
-                className={`px-3.5 py-1.5 rounded-sm text-xs uppercase tracking-wider transition-all ${
-                  selectedSubcat === sub.id
-                    ? 'bg-luxury-gold text-luxury-black font-semibold shadow-gold-glow'
-                    : 'bg-luxury-charcoal text-luxury-muted hover:text-luxury-ivory border border-luxury-borderSubtle'
-                }`}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap gap-2">
+              {subcategories.map(sub => (
+                <button
+                  key={sub.id}
+                  onClick={() => setSelectedSubcat(sub.id)}
+                  className={`px-3.5 py-1.5 rounded-sm text-xs uppercase tracking-wider transition-all ${
+                    selectedSubcat === sub.id
+                      ? 'bg-luxury-gold text-luxury-black font-semibold shadow-gold-glow'
+                      : 'bg-luxury-charcoal text-luxury-muted hover:text-luxury-ivory border border-luxury-borderSubtle'
+                  }`}
+                >
+                  {sub.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 pl-2 border-l border-luxury-borderSubtle">
+              <span className="text-[11px] uppercase tracking-wider text-luxury-muted whitespace-nowrap">Price:</span>
+              <select
+                value={priceRange}
+                onChange={(e) => setPriceRange(e.target.value)}
+                className="px-2.5 py-1.5 bg-luxury-charcoal border border-luxury-borderSubtle rounded-sm text-xs text-luxury-ivory focus:outline-none focus:border-luxury-gold"
               >
-                {sub.label}
-              </button>
-            ))}
+                {priceRanges.map(pr => (
+                  <option key={pr.id} value={pr.id}>{pr.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
