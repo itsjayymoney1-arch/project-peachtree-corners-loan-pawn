@@ -1,7 +1,7 @@
 // Core Database and Persistence Service for Peachtree Corners Loan & Pawn - THE VAULT
 import { DEMO_PRODUCTS } from '../data/inventory.js';
 import { STORE_INFO } from '../data/storeInfo.js';
-import { DEFAULT_MARKDOWN_TIERS } from './markdownEngine.js';
+import { DEFAULT_MARKDOWN_TIERS, getCurrentTier, calculateMarkdownPrice } from './markdownEngine.js';
 
 const DB_STORAGE_KEY = 'pc_vault_database_v2';
 
@@ -116,13 +116,34 @@ function generateInitialProducts() {
     const catCode = item.category.slice(0, 3).toUpperCase();
     const sku = `PC-${catCode}-2026-${String(index + 101).padStart(4, '0')}`;
     
-    // Dates added - staggered over recent weeks
-    const daysAgo = (index % 14) + 1;
+    // Dates added - staggered across life cycle and test ages (7d, 20d, 40d, 55d, 75d, 100d)
+    const testAges = [3, 7, 10, 12, 18, 20, 25, 35, 40, 50, 55, 65, 75, 85, 95, 100, 110, 14, 22];
+    const daysAgo = testAges[index % testAges.length];
     const dateAdded = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString();
 
     // Vault Drops and New Arrivals
-    const isNewArrival = index < 8;
+    const isNewArrival = daysAgo <= 14;
     const isVaultDrop = item.featured || index % 3 === 0;
+
+    // Markdown calculation based on arrival date
+    const tier = getCurrentTier(daysAgo, DEFAULT_MARKDOWN_TIERS);
+    // On the 100-day item (index 15), enforce a floor price of 85% of original price
+    const minimumPrice = (daysAgo === 100) ? Math.round(numPrice * 0.85) : null;
+    const currentPrice = tier.discountPercent > 0
+      ? calculateMarkdownPrice(numPrice, tier.discountPercent, minimumPrice)
+      : numPrice;
+
+    const initialHistory = tier.discountPercent > 0 ? [
+      {
+        date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        fromPrice: numPrice,
+        toPrice: currentPrice,
+        discountPercent: tier.discountPercent,
+        tier: tier.id,
+        appliedBy: 'system_markdown_engine',
+        reason: `Aging markdown — ${tier.label} (${daysAgo} days in inventory)`
+      }
+    ] : [];
 
     return {
       id: item.id,
@@ -134,8 +155,8 @@ function generateInitialProducts() {
       brand: brand,
       model: item.specs ? Object.values(item.specs)[0] || '' : '',
       condition: item.condition || 'Polished & Inspected',
-      price: numPrice,
-      estimatedValue: item.estimatedValue,
+      price: currentPrice,
+      estimatedValue: `$${numPrice.toLocaleString()}`,
       quantity: 1, // High-value pawn inventory typically 1 of a kind
       images: [
         item.image,
@@ -164,11 +185,11 @@ function generateInitialProducts() {
       // Markdown / aging fields
       inventoryArrivalDate: dateAdded,
       originalApprovedPrice: numPrice,
-      minimumPrice: null,
-      markdownPaused: false,
-      markdownHistory: [],
-      currentMarkdownTier: 'tier-0',
-      currentDiscountPercent: 0,
+      minimumPrice: minimumPrice,
+      markdownPaused: index === 11, // Test manual pause on one aged item
+      markdownHistory: initialHistory,
+      currentMarkdownTier: tier.id,
+      currentDiscountPercent: tier.discountPercent,
     };
   });
 }
