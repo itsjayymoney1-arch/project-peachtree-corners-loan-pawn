@@ -597,10 +597,19 @@ function createDefaultDatabase() {
   };
 }
 
+// In-memory fallback cache for Node/SSR environments
+let memoryStore = null;
+
 // Database helper functions
 export const dbService = {
   getSnapshot() {
     try {
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+        if (!memoryStore) {
+          memoryStore = createDefaultDatabase();
+        }
+        return memoryStore;
+      }
       const raw = localStorage.getItem(DB_STORAGE_KEY);
       if (!raw) {
         const initial = createDefaultDatabase();
@@ -646,15 +655,21 @@ export const dbService = {
       return parsed;
     } catch (e) {
       console.warn("Storage access fallback to default database", e);
-      return createDefaultDatabase();
+      if (!memoryStore) memoryStore = createDefaultDatabase();
+      return memoryStore;
     }
   },
 
   saveSnapshot(data) {
     try {
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+        memoryStore = data;
+        return;
+      }
       localStorage.setItem(DB_STORAGE_KEY, JSON.stringify(data));
     } catch (e) {
       console.error("Failed to save database snapshot", e);
+      memoryStore = data;
     }
   },
 
