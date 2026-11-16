@@ -1,6 +1,6 @@
 // SMS Notification & Consent Service for Peachtree Corners Loan & Pawn
-import { STORE_INFO } from '../data/storeInfo';
-import { dbService } from './db';
+import { STORE_INFO } from '../data/storeInfo.js';
+import { dbService } from './db.js';
 
 export const smsService = {
   // Send SMS and log to notification history
