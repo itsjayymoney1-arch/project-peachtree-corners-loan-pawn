@@ -1,6 +1,6 @@
 // Core Database and Persistence Service for Peachtree Corners Loan & Pawn - THE VAULT
-import { DEMO_PRODUCTS } from '../data/inventory';
-import { STORE_INFO } from '../data/storeInfo';
+import { DEMO_PRODUCTS } from '../data/inventory.js';
+import { STORE_INFO } from '../data/storeInfo.js';
 import { DEFAULT_MARKDOWN_TIERS } from './markdownEngine.js';
 
 const DB_STORAGE_KEY = 'pc_vault_database_v2';
