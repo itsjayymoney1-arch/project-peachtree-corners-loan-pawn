@@ -34,6 +34,7 @@ export function RouterProvider({ children }) {
       '/pawn-loans',
       '/about',
       '/contact',
+      '/new-arrivals',
       '/unsubscribe'
     ];
     for (const r of routes) {

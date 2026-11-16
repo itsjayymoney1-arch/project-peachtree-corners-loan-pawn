@@ -934,6 +934,13 @@ export function AppProvider({ children }) {
         subscribeToVaultWeekly,
         createAndDispatchCampaign,
 
+        // Markdown Engine & Aging
+        runMarkdownEngine,
+        getMarkdownSettings,
+        updateMarkdownSettings,
+        getAgingReport,
+        overrideProductPrice,
+
         // Reset
         resetDemoData,
         reloadDb
