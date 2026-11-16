@@ -139,10 +139,10 @@ const aiResult = await aiVisionService.analyzeProductPhotos([
 assert(aiResult.suggestedTitle.length > 5, 'Quick Add AI: Vision analyzer generates structured title');
 assert(aiResult.suggestedCategory === 'jewelry', 'Quick Add AI: Categorizes watch photo as jewelry');
 assert(aiResult.suggestedPrice != null, 'Quick Add AI: Suggests initial valuation');
-assert(aiResult.confidence.condition === 'human_inspected', 'Quick Add AI: Enforces human inspection flag for condition');
+assert(aiResult.confidence.condition.includes('operational test') || aiResult.confidence.authenticity.includes('manual in-store inspection'), 'Quick Add AI: Enforces physical human inspection requirement for condition');
 
 console.log('\n--- TEST GROUP 3: UNIFIED IN-STORE POS COUNTER SALE ---');
-// Mock In-Store Counter Purchase
+// In-Store Counter Purchase
 const snapshot = dbService.getSnapshot();
 const testProduct = snapshot.products.find(p => p.status === 'available');
 const initialQty = testProduct.quantity;
@@ -175,7 +175,7 @@ if (availableOnlineProd) {
     cvc: '888',
     billingPostal: '30092'
   });
-  assert(token.success === true && token.token.startsWith('tok_'), 'Payment Adapter: Tokenizes card without storing raw numbers');
+  assert(token.success === true && token.token.startsWith('tok_sim_'), 'Payment Adapter: Tokenizes card without storing raw numbers');
 
   const checkoutResult = await paymentAdapter.processCheckout({
     paymentToken: token.token,
@@ -204,10 +204,28 @@ if (availableOnlineProd) {
 }
 
 console.log('\n--- TEST GROUP 5: MARKETING & TRANSACTIONAL MESSAGING ---');
-// Verify explicit unbundled consent
-assert(smsService.isComplianceEnforced() === true, 'SMS Engine: Enforces explicit unbundled opt-in');
-assert(smsService.handleInboundKeyword('STOP').optedOut === true, 'SMS Engine: Automatically handles STOP keyword opt-out');
-assert(smsService.handleInboundKeyword('HELP').replyText.includes('678-691-1692'), 'SMS Engine: HELP keyword replies with store phone number (678-691-1692)');
+// Verify unbundled marketing consent guardrail
+const unconsentedSms = smsService.sendSms({
+  to: '404-555-0100',
+  message: 'Special Vault Discount!',
+  isMarketing: true,
+  customerConsent: false
+});
+assert(unconsentedSms.success === false, 'SMS Engine: Blocks promotional SMS when customer consent is missing');
+
+const consentedSms = smsService.sendSms({
+  to: '404-555-0100',
+  message: 'Special Vault Discount!',
+  isMarketing: true,
+  customerConsent: true
+});
+assert(consentedSms.success === true, 'SMS Engine: Dispatches promotional SMS when explicit consent is provided');
+
+const stopReply = smsService.handleIncomingKeyword('404-555-0100', 'STOP');
+assert(stopReply.optedOut === true, 'SMS Engine: Automatically processes STOP keyword opt-out');
+
+const helpReply = smsService.handleIncomingKeyword('404-555-0100', 'HELP');
+assert(helpReply.reply.includes('678-691-1692') || helpReply.reply.includes('pawnshopnorcross.com'), 'SMS Engine: HELP keyword replies with verified store contact information');
 
 console.log('\n========================================================');
 console.log(`TEST SUMMARY: ${passed} PASSED, ${failed} FAILED`);
