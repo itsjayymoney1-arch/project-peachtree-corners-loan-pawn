@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { STORE_INFO } from '../data/storeInfo';
 import SmartInventoryIntakeModal from '../components/SmartInventoryIntakeModal';
 import { paymentAdapter } from '../services/paymentAdapter';
+import { getItemAgingReport, DEFAULT_MARKDOWN_TIERS } from '../services/markdownEngine';
 import { 
   LayoutDashboard, 
   Package, 
@@ -19,7 +20,17 @@ import {
   Clock, 
   AlertCircle, 
   DollarSign, 
-  TrendingUp, 
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  Settings,
+  Shield,
+  FileText,
+  AlertTriangle,
+  Tag,
+  Play,
+  Pause,
+  SlidersHorizontal,
   ArrowUpRight, 
   Store, 
   Truck, 
@@ -56,7 +67,12 @@ export default function Admin() {
     addOrderNote,
     processOrderRefund,
     createAndDispatchCampaign,
-    resetDemoData
+    resetDemoData,
+    runMarkdownEngine,
+    getMarkdownSettings,
+    updateMarkdownSettings,
+    getAgingReport,
+    overrideProductPrice
   } = useApp();
 
   const { navigate } = useRouter();
