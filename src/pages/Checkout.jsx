@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 export default function Checkout() {
-  const { cart, customerUser, clearCart } = useApp();
+  const { cart, customerUser, clearCart, subscribeToVaultWeekly } = useApp();
   const { navigate } = useRouter();
 
   // Form states
@@ -114,6 +114,21 @@ export default function Checkout() {
         shippingAddress: fulfillmentMethod === 'shipping' ? { street, city, state, zip } : null,
         actor: customerUser ? { id: customerUser.id, email: customerUser.email, role: 'CUSTOMER' } : null
       });
+
+      // Handle unbundled marketing consent if explicitly opted in
+      if (emailConsent || smsConsent) {
+        try {
+          await subscribeToVaultWeekly({
+            email,
+            firstName,
+            phone,
+            consentEmail: emailConsent,
+            consentSms: smsConsent
+          });
+        } catch (subErr) {
+          console.warn("Marketing subscription error on checkout:", subErr);
+        }
+      }
 
       // Clear local cart
       clearCart();
