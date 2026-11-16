@@ -159,21 +159,38 @@ export default function Shop({ onSelectProduct, onInquireProduct }) {
             )}
           </div>
 
-          {/* Sort By Dropdown */}
-          <div className="flex items-center gap-3">
-            <span className="text-xs uppercase tracking-wider text-luxury-muted whitespace-nowrap">
-              Sort By:
-            </span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2.5 bg-luxury-charcoal border border-luxury-borderSubtle rounded-sm text-xs uppercase tracking-wider text-luxury-ivory focus:outline-none focus:border-luxury-gold transition-colors"
-            >
-              <option value="featured">Featured First</option>
-              <option value="price-low">Est. Value: Low to High</option>
-              <option value="price-high">Est. Value: High to Low</option>
-              <option value="name">Name: A to Z</option>
-            </select>
+          {/* Controls: Price Filter & Sort */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase tracking-wider text-luxury-muted whitespace-nowrap">
+                Price:
+              </span>
+              <select
+                value={priceRange}
+                onChange={(e) => setPriceRange(e.target.value)}
+                className="px-3 py-2.5 bg-luxury-charcoal border border-luxury-borderSubtle rounded-sm text-xs uppercase tracking-wider text-luxury-ivory focus:outline-none focus:border-luxury-gold transition-colors"
+              >
+                {priceRanges.map(pr => (
+                  <option key={pr.id} value={pr.id}>{pr.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase tracking-wider text-luxury-muted whitespace-nowrap">
+                Sort:
+              </span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-2.5 bg-luxury-charcoal border border-luxury-borderSubtle rounded-sm text-xs uppercase tracking-wider text-luxury-ivory focus:outline-none focus:border-luxury-gold transition-colors"
+              >
+                <option value="featured">Featured First</option>
+                <option value="price-low">Est. Value: Low to High</option>
+                <option value="price-high">Est. Value: High to Low</option>
+                <option value="name">Name: A to Z</option>
+              </select>
+            </div>
           </div>
 
         </div>

@@ -19,12 +19,28 @@ export default function Jewelry({ onSelectProduct, onInquireProduct }) {
   const { navigate } = useRouter();
   const { products } = useApp();
   const [selectedSubcat, setSelectedSubcat] = useState('all');
+  const [priceRange, setPriceRange] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const jewelryProducts = products.filter(p => p.category === 'jewelry' && p.status !== 'draft' && p.status !== 'archived');
 
-  const filtered = selectedSubcat === 'all'
-    ? jewelryProducts
-    : jewelryProducts.filter(p => p.subcategory?.toLowerCase().includes(selectedSubcat.toLowerCase()));
+  const filtered = jewelryProducts.filter(p => {
+    if (selectedSubcat !== 'all' && !p.subcategory?.toLowerCase().includes(selectedSubcat.toLowerCase())) {
+      return false;
+    }
+    const price = p.price || 0;
+    if (priceRange === 'under-250' && price >= 250) return false;
+    if (priceRange === '250-750' && (price < 250 || price > 750)) return false;
+    if (priceRange === '750-1500' && (price < 750 || price > 1500)) return false;
+    if (priceRange === 'over-1500' && price <= 1500) return false;
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const match = p.title?.toLowerCase().includes(q) || p.brand?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q);
+      if (!match) return false;
+    }
+    return true;
+  });
 
   const subcategories = [
     { id: 'all', label: 'All Jewelry & Watches' },
@@ -32,6 +48,14 @@ export default function Jewelry({ onSelectProduct, onInquireProduct }) {
     { id: 'ring', label: 'Diamond Rings' },
     { id: 'chain', label: 'Gold Chains & Necklaces' },
     { id: 'bracelet', label: 'Bracelets & Bangles' },
+  ];
+
+  const priceRanges = [
+    { id: 'all', label: 'All Prices' },
+    { id: 'under-250', label: 'Under $250' },
+    { id: '250-750', label: '$250 – $750' },
+    { id: '750-1500', label: '$750 – $1,500' },
+    { id: 'over-1500', label: '$1,500+' },
   ];
 
   return (
@@ -99,21 +123,36 @@ export default function Jewelry({ onSelectProduct, onInquireProduct }) {
             </h2>
           </div>
 
-          {/* Subcategory Filter Buttons */}
-          <div className="flex flex-wrap gap-2">
-            {subcategories.map(sub => (
-              <button
-                key={sub.id}
-                onClick={() => setSelectedSubcat(sub.id)}
-                className={`px-3.5 py-1.5 rounded-sm text-xs uppercase tracking-wider transition-all ${
-                  selectedSubcat === sub.id
-                    ? 'bg-luxury-gold text-luxury-black font-semibold shadow-gold-glow'
-                    : 'bg-luxury-charcoal text-luxury-muted hover:text-luxury-ivory border border-luxury-borderSubtle'
-                }`}
+          {/* Subcategory & Price Filter Controls */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap gap-2">
+              {subcategories.map(sub => (
+                <button
+                  key={sub.id}
+                  onClick={() => setSelectedSubcat(sub.id)}
+                  className={`px-3.5 py-1.5 rounded-sm text-xs uppercase tracking-wider transition-all ${
+                    selectedSubcat === sub.id
+                      ? 'bg-luxury-gold text-luxury-black font-semibold shadow-gold-glow'
+                      : 'bg-luxury-charcoal text-luxury-muted hover:text-luxury-ivory border border-luxury-borderSubtle'
+                  }`}
+                >
+                  {sub.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 pl-2 border-l border-luxury-borderSubtle">
+              <span className="text-[11px] uppercase tracking-wider text-luxury-muted whitespace-nowrap">Price:</span>
+              <select
+                value={priceRange}
+                onChange={(e) => setPriceRange(e.target.value)}
+                className="px-2.5 py-1.5 bg-luxury-charcoal border border-luxury-borderSubtle rounded-sm text-xs text-luxury-ivory focus:outline-none focus:border-luxury-gold"
               >
-                {sub.label}
-              </button>
-            ))}
+                {priceRanges.map(pr => (
+                  <option key={pr.id} value={pr.id}>{pr.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
