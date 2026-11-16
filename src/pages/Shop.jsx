@@ -23,6 +23,7 @@ export default function Shop({ onSelectProduct, onInquireProduct }) {
   const [selectedCategory, setSelectedCategory] = useState(queryParams.category || 'all');
   const [searchQuery, setSearchQuery] = useState(queryParams.search || '');
   const [sortBy, setSortBy] = useState('featured');
+  const [priceRange, setPriceRange] = useState('all'); // 'all', 'under-150', '150-500', '500-1000', 'over-1000'
 
   // Filter categories list
   const categoryFilters = [
@@ -32,6 +33,15 @@ export default function Shop({ onSelectProduct, onInquireProduct }) {
     { id: 'tools', label: 'Tools & Equipment' },
     { id: 'instruments', label: 'Musical Instruments' },
     { id: 'collectibles', label: 'Collectibles' },
+  ];
+
+  // Price range options
+  const priceRanges = [
+    { id: 'all', label: 'All Prices' },
+    { id: 'under-150', label: 'Under $150' },
+    { id: '150-500', label: '$150 – $500' },
+    { id: '500-1000', label: '$500 – $1,000' },
+    { id: 'over-1000', label: '$1,000+' },
   ];
 
   // Filtered & Sorted products
@@ -45,6 +55,13 @@ export default function Shop({ onSelectProduct, onInquireProduct }) {
       if (selectedCategory !== 'all' && product.category !== selectedCategory) {
         return false;
       }
+      // Price range match
+      const price = product.price || 0;
+      if (priceRange === 'under-150' && price >= 150) return false;
+      if (priceRange === '150-500' && (price < 150 || price > 500)) return false;
+      if (priceRange === '500-1000' && (price < 500 || price > 1000)) return false;
+      if (priceRange === 'over-1000' && price <= 1000) return false;
+
       // Search query match
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
@@ -66,12 +83,13 @@ export default function Shop({ onSelectProduct, onInquireProduct }) {
       if (sortBy === 'price-high') return b.price - a.price;
       return 0;
     });
-  }, [products, selectedCategory, searchQuery, sortBy]);
+  }, [products, selectedCategory, searchQuery, sortBy, priceRange]);
 
   const clearFilters = () => {
     setSelectedCategory('all');
     setSearchQuery('');
     setSortBy('featured');
+    setPriceRange('all');
   };
 
   return (
