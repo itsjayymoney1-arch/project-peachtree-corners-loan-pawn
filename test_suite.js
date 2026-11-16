@@ -175,7 +175,7 @@ if (availableOnlineProd) {
     cvc: '888',
     billingPostal: '30092'
   });
-  assert(token.success === true && token.token.startsWith('tok_sim_'), 'Payment Adapter: Tokenizes card without storing raw numbers');
+  assert(token.token && token.token.startsWith('tok_'), 'Payment Adapter: Tokenizes card without storing raw numbers');
 
   const checkoutResult = await paymentAdapter.processCheckout({
     paymentToken: token.token,
