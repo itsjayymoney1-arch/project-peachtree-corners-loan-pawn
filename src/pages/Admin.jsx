@@ -117,6 +117,18 @@ export default function Admin() {
   // Status message
   const [feedbackMsg, setFeedbackMsg] = useState('');
 
+  // Markdown Engine state
+  const [isMarkdownRunning, setIsMarkdownRunning] = useState(false);
+  const [markdownSearch, setMarkdownSearch] = useState('');
+  const [markdownTierFilter, setMarkdownTierFilter] = useState('all');
+  const [overrideModalOpen, setOverrideModalOpen] = useState(false);
+  const [overrideProduct, setOverrideProduct] = useState(null);
+  const [overridePriceVal, setOverridePriceVal] = useState('');
+  const [overrideReasonVal, setOverrideReasonVal] = useState('');
+
+  // Customers state
+  const [customerSearch, setCustomerSearch] = useState('');
+
   // Calculations for Overview Dashboard Metrics
   const activeProductsCount = products.filter(p => p.status === 'available').length;
   const soldProductsCount = products.filter(p => p.status === 'sold').length;
