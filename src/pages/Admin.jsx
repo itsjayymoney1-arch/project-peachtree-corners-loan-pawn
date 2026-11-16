@@ -250,6 +250,112 @@ export default function Admin() {
     setSelectedOrder(updated);
   };
 
+  // Aging & Markdown helpers
+  const agingReport = useMemo(() => {
+    try {
+      return getAgingReport ? getAgingReport() : null;
+    } catch (e) {
+      return null;
+    }
+  }, [products, getAgingReport]);
+
+  const markdownSettings = useMemo(() => {
+    try {
+      return getMarkdownSettings ? getMarkdownSettings() : null;
+    } catch (e) {
+      return null;
+    }
+  }, [getMarkdownSettings]);
+
+  const handleExecuteMarkdownRun = async () => {
+    setIsMarkdownRunning(true);
+    try {
+      const res = await runMarkdownEngine();
+      setFeedbackMsg(`Markdown Engine executed successfully: ${res.processed} items analyzed, ${res.changed} prices updated.`);
+      setTimeout(() => setFeedbackMsg(''), 4000);
+    } catch (err) {
+      alert(err.message || 'Failed to run markdown engine');
+    } finally {
+      setIsMarkdownRunning(false);
+    }
+  };
+
+  const handleToggleMarkdownAutomation = () => {
+    if (!markdownSettings) return;
+    try {
+      updateMarkdownSettings({ enabled: !markdownSettings.enabled });
+      setFeedbackMsg(`Markdown automation ${!markdownSettings.enabled ? 'Enabled' : 'Disabled'}.`);
+      setTimeout(() => setFeedbackMsg(''), 3000);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleToggleMarkdownApproval = () => {
+    if (!markdownSettings) return;
+    try {
+      updateMarkdownSettings({ requireApproval: !markdownSettings.requireApproval });
+      setFeedbackMsg(`Owner approval requirement ${!markdownSettings.requireApproval ? 'Enabled' : 'Disabled'}.`);
+      setTimeout(() => setFeedbackMsg(''), 3000);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleToggleProductMarkdownPause = (product) => {
+    try {
+      updateProduct(product.id, { markdownPaused: !product.markdownPaused });
+      setFeedbackMsg(`Markdown ${!product.markdownPaused ? 'paused' : 'resumed'} for "${product.title}".`);
+      setTimeout(() => setFeedbackMsg(''), 3000);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleSavePriceOverride = (e) => {
+    e.preventDefault();
+    if (!overrideProduct || !overridePriceVal) return;
+    try {
+      overrideProductPrice(overrideProduct.id, parseFloat(overridePriceVal), overrideReasonVal || 'Staff manual price adjustment');
+      setFeedbackMsg(`Price override saved for "${overrideProduct.title}" -> $${parseFloat(overridePriceVal).toLocaleString()}.`);
+      setOverrideModalOpen(false);
+      setOverrideProduct(null);
+      setOverridePriceVal('');
+      setOverrideReasonVal('');
+      setTimeout(() => setFeedbackMsg(''), 3000);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  // Filtered Products for Markdown Tab
+  const filteredMarkdownProducts = useMemo(() => {
+    return products.filter(p => {
+      if (p.status === 'draft' || p.status === 'archived') return false;
+      if (markdownTierFilter !== 'all' && p.currentMarkdownTier !== markdownTierFilter) return false;
+      if (markdownSearch.trim()) {
+        const q = markdownSearch.toLowerCase();
+        const mTitle = p.title?.toLowerCase().includes(q);
+        const mSku = p.sku?.toLowerCase().includes(q);
+        const mBrand = p.brand?.toLowerCase().includes(q);
+        if (!mTitle && !mSku && !mBrand) return false;
+      }
+      return true;
+    });
+  }, [products, markdownTierFilter, markdownSearch]);
+
+  // Filtered Customers
+  const filteredCustomers = useMemo(() => {
+    return customers.filter(c => {
+      if (!customerSearch.trim()) return true;
+      const q = customerSearch.toLowerCase();
+      const mName = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase().includes(q);
+      const mEmail = c.email?.toLowerCase().includes(q);
+      const mPhone = c.phone?.toLowerCase().includes(q);
+      return mName || mEmail || mPhone;
+    });
+  }, [customers, customerSearch]);
+
   return (
     <div className="min-h-screen bg-luxury-black text-luxury-ivory pb-20 animate-fadeIn">
       
@@ -307,10 +413,14 @@ export default function Admin() {
           {[
             { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
             { id: 'inventory', label: `Inventory (${products.length})`, icon: Package },
+            { id: 'markdown', label: 'Aging & Markdowns', icon: TrendingDown },
             { id: 'orders', label: `Orders (${orders.length})`, icon: ShoppingBag },
+            { id: 'customers', label: `Customers (${customers.length})`, icon: Users },
             { id: 'marketing', label: 'Vault Weekly & Campaigns', icon: Megaphone },
-            { id: 'staff', label: 'Staff & Roles (RBAC)', icon: Users, ownerOnly: true },
-            { id: 'audit', label: 'Audit Trail', icon: ShieldCheck },
+            { id: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
+            { id: 'staff', label: 'Staff & Roles (RBAC)', icon: ShieldCheck, ownerOnly: true },
+            { id: 'settings', label: 'Store Settings', icon: Settings },
+            { id: 'audit', label: 'Audit Trail', icon: FileText },
             { id: 'notifications', label: 'Notification Center', icon: Bell }
           ].map(tab => {
             const Icon = tab.icon;
@@ -703,6 +813,388 @@ export default function Admin() {
         )}
 
         {/* ========================================================= */}
+        {/* TAB 2.5: AGING & AUTOMATIC PROGRESSIVE MARKDOWNS          */}
+        {/* ========================================================= */}
+        {activeTab === 'markdown' && (
+          <div className="space-y-8 animate-fadeIn">
+            
+            {/* Header & Primary Controls */}
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-luxury-borderSubtle pb-5">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-luxury-gold/15 text-luxury-goldLight border border-luxury-gold/30 text-xs uppercase tracking-widest font-bold mb-2">
+                  <TrendingDown className="w-3.5 h-3.5 text-luxury-gold" />
+                  Peachtree Progressive Markdown System
+                </div>
+                <h3 className="font-editorial text-2xl sm:text-3xl font-bold text-luxury-ivory">
+                  Inventory Aging &amp; Markdown Engine
+                </h3>
+                <p className="text-xs text-luxury-muted max-w-2xl mt-1">
+                  Automated deterministic pricing engine that moves aged merchandise through 6 age brackets (0–14d, 15–30d, 31–45d, 46–60d, 61–90d, 91+d) while enforcing strict non-compounding rules and individual minimum price floors.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={handleExecuteMarkdownRun}
+                  disabled={isMarkdownRunning}
+                  className="px-5 py-2.5 rounded-sm bg-gradient-to-r from-luxury-gold to-luxury-goldLight text-luxury-black font-bold text-xs uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-gold-glow flex items-center gap-2 disabled:opacity-50"
+                  title="Execute markdown engine recalculation over all showroom items"
+                >
+                  <Play className={`w-3.5 h-3.5 ${isMarkdownRunning ? 'animate-spin' : ''}`} />
+                  <span>{isMarkdownRunning ? 'Processing Engine...' : 'Run Markdown Engine Now'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Top Stat Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm p-5 space-y-1">
+                <span className="text-[10px] uppercase tracking-wider text-luxury-muted font-bold block">
+                  Showroom Inventory Value
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="font-editorial text-2xl font-bold text-luxury-gold">
+                    ${agingReport?.totalCurrentValue ? agingReport.totalCurrentValue.toLocaleString() : '0'}
+                  </span>
+                  <span className="text-xs text-luxury-muted line-through">
+                    ${agingReport?.totalOriginalValue ? agingReport.totalOriginalValue.toLocaleString() : '0'}
+                  </span>
+                </div>
+                <span className="text-[10px] text-luxury-muted block">
+                  Across {agingReport?.totalItems || products.length} catalog items
+                </span>
+              </div>
+
+              <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm p-5 space-y-1">
+                <span className="text-[10px] uppercase tracking-wider text-luxury-muted font-bold block">
+                  Total Markdown Discount
+                </span>
+                <span className="font-editorial text-2xl font-bold text-emerald-400">
+                  −${agingReport?.totalMarkdownAmount ? agingReport.totalMarkdownAmount.toLocaleString() : '0'}
+                </span>
+                <span className="text-[10px] text-emerald-300/80 block">
+                  Customer savings currently active
+                </span>
+              </div>
+
+              <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm p-5 space-y-1">
+                <span className="text-[10px] uppercase tracking-wider text-luxury-muted font-bold block">
+                  Discounted Merchandise
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="font-editorial text-2xl font-bold text-luxury-ivory">
+                    {agingReport?.itemsDiscounted || 0} Items
+                  </span>
+                  <span className="text-xs font-bold text-luxury-gold">
+                    ({Math.round(((agingReport?.itemsDiscounted || 0) / (agingReport?.totalItems || 1)) * 100)}%)
+                  </span>
+                </div>
+                <span className="text-[10px] text-luxury-muted block">
+                  {agingReport?.itemsAtMaxDiscount || 0} items at maximum tier (25%)
+                </span>
+              </div>
+
+              <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm p-5 space-y-1">
+                <span className="text-[10px] uppercase tracking-wider text-luxury-muted font-bold block">
+                  Last Engine Execution
+                </span>
+                <div className="flex items-center gap-1.5 text-luxury-gold text-xs font-mono font-bold mt-1">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>
+                    {markdownSettings?.lastRunAt 
+                      ? new Date(markdownSettings.lastRunAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                      : 'Scheduled Daily'}
+                  </span>
+                </div>
+                <span className="text-[10px] text-luxury-muted block">
+                  Operator: {markdownSettings?.lastRunBy || 'Automated Cron'}
+                </span>
+              </div>
+            </div>
+
+            {/* Policy & Engine Controls Box */}
+            <div className="bg-luxury-charcoal/60 border border-luxury-gold/30 rounded-sm p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-luxury-borderSubtle pb-4">
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-luxury-gold flex items-center gap-2">
+                    <SlidersHorizontal className="w-4 h-4 text-luxury-gold" />
+                    Markdown Engine Policies &amp; Governance
+                  </h4>
+                  <p className="text-xs text-luxury-muted">
+                    Configure automated repricing schedules, owner approval safeguards, and pricing boundaries.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4 text-xs">
+                  <label className="flex items-center gap-2 cursor-pointer bg-luxury-darkCard border border-luxury-borderSubtle px-3 py-1.5 rounded">
+                    <input
+                      type="checkbox"
+                      checked={markdownSettings?.enabled ?? true}
+                      onChange={handleToggleMarkdownAutomation}
+                      className="accent-luxury-gold"
+                    />
+                    <span className="font-semibold text-luxury-ivory">Engine Enabled</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer bg-luxury-darkCard border border-luxury-borderSubtle px-3 py-1.5 rounded">
+                    <input
+                      type="checkbox"
+                      checked={markdownSettings?.requireApproval ?? false}
+                      onChange={handleToggleMarkdownApproval}
+                      className="accent-luxury-gold"
+                    />
+                    <span className="font-semibold text-luxury-ivory">Require Owner Sign-Off</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Guarantees & Verification Badges */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                <div className="p-3 bg-luxury-darkCard rounded border border-luxury-borderSubtle flex items-start gap-2.5">
+                  <ShieldCheck className="w-4 h-4 text-luxury-gold shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="text-luxury-ivory block text-[11px] uppercase">Non-Compounding Calculations</strong>
+                    <p className="text-luxury-muted text-[11px] mt-0.5">
+                      All markdown discounts are calculated strictly against the initial approved baseline price (never discounted on top of a discount).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-luxury-darkCard rounded border border-luxury-borderSubtle flex items-start gap-2.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="text-luxury-ivory block text-[11px] uppercase">Strict Price Floor Enforcement</strong>
+                    <p className="text-luxury-muted text-[11px] mt-0.5">
+                      Items configured with a minimum floor price (or store cost threshold) will never drop below that floor regardless of age.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-luxury-darkCard rounded border border-luxury-borderSubtle flex items-start gap-2.5">
+                  <ShieldCheck className="w-4 h-4 text-luxury-gold shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="text-luxury-ivory block text-[11px] uppercase">Sold &amp; Paused Isolation</strong>
+                    <p className="text-luxury-muted text-[11px] mt-0.5">
+                      Items marked sold, archived, or manually paused are permanently excluded from automated markdown calculations.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Visual Aging Brackets Distribution Pipeline */}
+            <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-luxury-borderSubtle pb-3">
+                <h4 className="text-sm font-bold text-luxury-ivory uppercase tracking-wider">
+                  Showroom Aging Brackets &amp; Discount Tiers
+                </h4>
+                <span className="text-xs text-luxury-muted">
+                  Click a tier to filter the inventory list below
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                {[
+                  { id: 'all', label: 'All Items', days: 'All Days', pct: null, count: agingReport?.totalItems || products.length },
+                  { id: 'tier-0', label: 'Tier 0', days: '0–14 days', pct: '0%', count: agingReport?.byTier?.find(t => t.id === 'tier-0')?.count || 0 },
+                  { id: 'tier-1', label: 'Tier 1', days: '15–30 days', pct: '5%', count: agingReport?.byTier?.find(t => t.id === 'tier-1')?.count || 0 },
+                  { id: 'tier-2', label: 'Tier 2', days: '31–45 days', pct: '10%', count: agingReport?.byTier?.find(t => t.id === 'tier-2')?.count || 0 },
+                  { id: 'tier-3', label: 'Tier 3', days: '46–60 days', pct: '15%', count: agingReport?.byTier?.find(t => t.id === 'tier-3')?.count || 0 },
+                  { id: 'tier-4', label: 'Tier 4', days: '61–90 days', pct: '20%', count: agingReport?.byTier?.find(t => t.id === 'tier-4')?.count || 0 },
+                  { id: 'tier-5', label: 'Tier 5', days: '91+ days', pct: '25%', count: agingReport?.byTier?.find(t => t.id === 'tier-5')?.count || 0 },
+                ].map((tierItem) => {
+                  const isSelected = markdownTierFilter === tierItem.id;
+                  return (
+                    <button
+                      key={tierItem.id}
+                      onClick={() => setMarkdownTierFilter(tierItem.id)}
+                      className={`p-3.5 rounded-sm border text-left transition-all ${
+                        isSelected 
+                          ? 'border-luxury-gold bg-luxury-gold/10 shadow-gold-glow' 
+                          : 'border-luxury-borderSubtle bg-luxury-charcoal/50 hover:border-luxury-gold/40'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold text-luxury-gold tracking-wider">
+                          {tierItem.label}
+                        </span>
+                        {tierItem.pct && (
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                            tierItem.pct === '0%' ? 'bg-luxury-black text-luxury-muted' : 'bg-emerald-950 text-emerald-300'
+                          }`}>
+                            {tierItem.pct}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-luxury-muted block mt-1">{tierItem.days}</span>
+                      <span className="font-editorial text-xl font-bold text-luxury-ivory block mt-2">
+                        {tierItem.count} items
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Aging Inventory Item-by-Item Table */}
+            <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm overflow-hidden space-y-4">
+              
+              <div className="p-4 sm:p-6 border-b border-luxury-borderSubtle flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="w-4 h-4 text-luxury-gold absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={markdownSearch}
+                    onChange={(e) => setMarkdownSearch(e.target.value)}
+                    placeholder="Search by title, SKU, brand..."
+                    className="w-full pl-10 pr-4 py-2 bg-luxury-charcoal border border-luxury-borderSubtle rounded text-xs text-luxury-ivory placeholder-luxury-muted focus:outline-none focus:border-luxury-gold"
+                  />
+                </div>
+
+                <div className="flex items-center gap-3 text-xs text-luxury-muted">
+                  <span>Showing <strong className="text-luxury-gold">{filteredMarkdownProducts.length}</strong> items</span>
+                  {markdownTierFilter !== 'all' && (
+                    <button
+                      onClick={() => setMarkdownTierFilter('all')}
+                      className="text-luxury-gold hover:underline text-[11px] font-semibold"
+                    >
+                      Clear Tier Filter
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-luxury-charcoal/80 text-luxury-gold text-[10px] uppercase tracking-wider border-b border-luxury-borderSubtle">
+                    <tr>
+                      <th className="p-3.5">Product / SKU</th>
+                      <th className="p-3.5">Category</th>
+                      <th className="p-3.5">Showroom Age</th>
+                      <th className="p-3.5">Current Tier</th>
+                      <th className="p-3.5">Discount Rate</th>
+                      <th className="p-3.5">Approved Base</th>
+                      <th className="p-3.5">Floor Price</th>
+                      <th className="p-3.5">Live Store Price</th>
+                      <th className="p-3.5">Status</th>
+                      <th className="p-3.5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-luxury-borderSubtle">
+                    {filteredMarkdownProducts.map(product => {
+                      const aging = getItemAgingReport(product, markdownSettings);
+                      const isPaused = product.markdownPaused;
+                      return (
+                        <tr key={product.id} className="hover:bg-luxury-surface/30 transition-colors">
+                          <td className="p-3.5">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={product.primaryImage || product.image}
+                                alt=""
+                                className="w-10 h-10 object-cover rounded bg-luxury-charcoal shrink-0"
+                              />
+                              <div>
+                                <span className="font-medium text-luxury-ivory block line-clamp-1">{product.title}</span>
+                                <span className="text-[10px] text-luxury-muted font-mono">{product.sku}</span>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="p-3.5 text-luxury-muted capitalize">
+                            {product.category}
+                          </td>
+
+                          <td className="p-3.5 font-mono text-luxury-goldLight font-bold">
+                            {aging.daysInInventory} days
+                          </td>
+
+                          <td className="p-3.5">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-luxury-charcoal border border-luxury-borderSubtle text-luxury-ivory">
+                              {aging.currentTier.label}
+                            </span>
+                          </td>
+
+                          <td className="p-3.5">
+                            {aging.discountPercent > 0 ? (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700/50">
+                                −{aging.discountPercent}%
+                              </span>
+                            ) : (
+                              <span className="text-luxury-muted text-[11px]">0% (Base)</span>
+                            )}
+                          </td>
+
+                          <td className="p-3.5 font-mono text-luxury-muted">
+                            ${(product.originalApprovedPrice || product.price).toLocaleString()}
+                          </td>
+
+                          <td className="p-3.5 font-mono">
+                            {product.minimumPrice ? (
+                              <span className="text-emerald-400 font-bold">${product.minimumPrice.toLocaleString()}</span>
+                            ) : (
+                              <span className="text-luxury-muted text-[11px]">None</span>
+                            )}
+                          </td>
+
+                          <td className="p-3.5 font-mono font-bold text-luxury-gold text-sm">
+                            ${product.price.toLocaleString()}
+                          </td>
+
+                          <td className="p-3.5">
+                            {isPaused ? (
+                              <span className="px-2 py-0.5 text-[10px] rounded bg-amber-950 text-amber-300 border border-amber-700/50">
+                                Markdown Paused
+                              </span>
+                            ) : product.status === 'sold' ? (
+                              <span className="px-2 py-0.5 text-[10px] rounded bg-red-950 text-red-300 border border-red-700/50">
+                                Sold Out
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 text-[10px] rounded bg-emerald-950 text-emerald-300 border border-emerald-700/50">
+                                Active Automation
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="p-3.5 text-right space-x-2">
+                            <button
+                              onClick={() => {
+                                setOverrideProduct(product);
+                                setOverridePriceVal(product.price);
+                                setOverrideReasonVal('');
+                                setOverrideModalOpen(true);
+                              }}
+                              className="px-2.5 py-1 bg-luxury-charcoal border border-luxury-borderSubtle hover:border-luxury-gold text-luxury-ivory hover:text-luxury-gold text-[10px] uppercase rounded transition-colors"
+                              title="Set manual price override"
+                            >
+                              Override Price
+                            </button>
+
+                            <button
+                              onClick={() => handleToggleProductMarkdownPause(product)}
+                              className={`px-2 py-1 text-[10px] uppercase rounded border transition-colors ${
+                                isPaused
+                                  ? 'bg-emerald-950 border-emerald-700 text-emerald-300 hover:bg-emerald-900'
+                                  : 'bg-luxury-charcoal border-luxury-borderSubtle text-luxury-muted hover:text-white'
+                              }`}
+                              title={isPaused ? "Resume automated markdowns" : "Pause automated markdowns for this specific item"}
+                            >
+                              {isPaused ? 'Resume' : 'Pause'}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+
+          </div>
+        )}
+
+        {/* ========================================================= */}
         {/* TAB 3: ORDERS & FULFILLMENT                               */}
         {/* ========================================================= */}
         {activeTab === 'orders' && (
@@ -829,6 +1321,183 @@ export default function Admin() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* TAB 3.5: REGISTERED CLIENT ACCOUNTS                       */}
+        {/* ========================================================= */}
+        {activeTab === 'customers' && (
+          <div className="space-y-6 animate-fadeIn">
+            
+            <div className="border-b border-luxury-borderSubtle pb-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-luxury-gold/15 text-luxury-goldLight border border-luxury-gold/30 text-xs uppercase tracking-widest font-bold mb-2">
+                <Users className="w-3.5 h-3.5 text-luxury-gold" />
+                Client Directory &bull; Account Records
+              </div>
+              <h3 className="font-editorial text-2xl font-bold text-luxury-ivory">
+                Registered Customer Accounts ({customers.length})
+              </h3>
+              <p className="text-xs text-luxury-muted">
+                Inspect customer account profiles, order linkage, contact verification status, and communication consent records.
+              </p>
+            </div>
+
+            {/* Quick Metrics */}
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm p-4">
+                <span className="text-[10px] uppercase font-bold text-luxury-muted block">Total Clients</span>
+                <span className="font-editorial text-2xl font-bold text-luxury-gold">{customers.length}</span>
+              </div>
+              <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm p-4">
+                <span className="text-[10px] uppercase font-bold text-luxury-muted block">Email Verified</span>
+                <span className="font-editorial text-2xl font-bold text-emerald-400">
+                  {customers.filter(c => c.emailVerified).length} Accounts
+                </span>
+              </div>
+              <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm p-4">
+                <span className="text-[10px] uppercase font-bold text-luxury-muted block">Vault Subscribers</span>
+                <span className="font-editorial text-2xl font-bold text-luxury-ivory">{subscribers.length} Profiles</span>
+              </div>
+              <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm p-4">
+                <span className="text-[10px] uppercase font-bold text-luxury-muted block">Repeat Buyers</span>
+                <span className="font-editorial text-2xl font-bold text-luxury-goldLight">
+                  {customers.filter(c => orders.filter(o => o.customerId === c.id || o.customerEmail?.toLowerCase() === c.email?.toLowerCase()).length > 1).length} Clients
+                </span>
+              </div>
+            </div>
+
+            {/* Search Bar */}
+            <div className="bg-luxury-darkCard border border-luxury-borderSubtle p-4 rounded-sm flex flex-col sm:flex-row gap-4 justify-between items-center text-xs">
+              <div className="relative w-full sm:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-luxury-gold" />
+                <input
+                  type="text"
+                  placeholder="Search customer name, email, phone..."
+                  value={customerSearch}
+                  onChange={(e) => setCustomerSearch(e.target.value)}
+                  className="w-full bg-luxury-charcoal border border-luxury-borderSubtle rounded-sm pl-9 pr-3 py-2 text-luxury-ivory focus:border-luxury-gold outline-none"
+                />
+              </div>
+              <span className="text-luxury-muted text-xs">
+                Showing <strong className="text-luxury-gold">{filteredCustomers.length}</strong> client records
+              </span>
+            </div>
+
+            {/* Customers Table */}
+            <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-luxury-charcoal/80 text-luxury-gold text-[10px] uppercase tracking-wider border-b border-luxury-borderSubtle">
+                    <tr>
+                      <th className="p-3.5">Client Profile</th>
+                      <th className="p-3.5">Email &amp; Verification</th>
+                      <th className="p-3.5">Phone Number</th>
+                      <th className="p-3.5">Registered Date</th>
+                      <th className="p-3.5">Order History</th>
+                      <th className="p-3.5">Communication Consent</th>
+                      <th className="p-3.5 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-luxury-borderSubtle">
+                    {filteredCustomers.map(cust => {
+                      const custOrders = orders.filter(o => 
+                        (o.customerId && o.customerId === cust.id) ||
+                        (o.customerEmail && o.customerEmail.toLowerCase() === cust.email.toLowerCase())
+                      );
+                      const totalSpend = custOrders.reduce((acc, o) => acc + (o.total || 0), 0);
+                      const prefs = cust.marketingPreferences || {};
+
+                      return (
+                        <tr key={cust.id} className="hover:bg-luxury-surface/30 transition-colors">
+                          <td className="p-3.5">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-luxury-charcoal border border-luxury-gold/40 flex items-center justify-center font-bold text-luxury-gold text-xs shrink-0">
+                                {cust.firstName ? cust.firstName[0].toUpperCase() : 'C'}
+                              </div>
+                              <div>
+                                <span className="font-medium text-luxury-ivory block">
+                                  {cust.firstName} {cust.lastName}
+                                </span>
+                                <span className="text-[10px] text-luxury-muted font-mono">{cust.id}</span>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="p-3.5">
+                            <span className="text-luxury-ivory block">{cust.email}</span>
+                            {cust.emailVerified ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-semibold">
+                                <CheckCircle2 className="w-3 h-3" />
+                                Verified
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] text-luxury-muted">
+                                <Clock className="w-3 h-3" />
+                                Verification Pending
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="p-3.5 text-luxury-muted font-mono">
+                            {cust.phone || '—'}
+                          </td>
+
+                          <td className="p-3.5 text-luxury-muted">
+                            {new Date(cust.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </td>
+
+                          <td className="p-3.5">
+                            <span className="font-bold text-luxury-ivory block">
+                              {custOrders.length} Order{custOrders.length !== 1 ? 's' : ''}
+                            </span>
+                            <span className="text-[10px] font-mono text-luxury-gold">
+                              ${totalSpend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Total
+                            </span>
+                          </td>
+
+                          <td className="p-3.5">
+                            <div className="flex flex-wrap gap-1">
+                              {prefs.emailWeeklyVault && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] uppercase font-bold bg-luxury-gold/15 text-luxury-goldLight border border-luxury-gold/30">
+                                  Weekly Vault
+                                </span>
+                              )}
+                              {prefs.smsOrderUpdates && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] uppercase font-bold bg-emerald-950 text-emerald-300 border border-emerald-700/50">
+                                  SMS Updates
+                                </span>
+                              )}
+                              {prefs.smsPromotions && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] uppercase font-bold bg-blue-950 text-blue-300 border border-blue-700/50">
+                                  SMS Promo
+                                </span>
+                              )}
+                              {!prefs.emailWeeklyVault && !prefs.smsOrderUpdates && !prefs.smsPromotions && (
+                                <span className="text-luxury-muted text-[10px]">Transactional Only</span>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="p-3.5 text-right">
+                            <button
+                              onClick={() => {
+                                setOrderSearch(cust.email);
+                                setActiveTab('orders');
+                              }}
+                              className="px-2.5 py-1 bg-luxury-charcoal border border-luxury-borderSubtle hover:border-luxury-gold text-luxury-gold text-[10px] uppercase font-semibold rounded"
+                            >
+                              View Orders
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
           </div>
@@ -997,6 +1666,191 @@ export default function Admin() {
         )}
 
         {/* ========================================================= */}
+        {/* TAB 4.5: REPORTS & RETAIL PERFORMANCE ANALYTICS           */}
+        {/* ========================================================= */}
+        {activeTab === 'reports' && (
+          <div className="space-y-8 animate-fadeIn">
+            
+            <div className="border-b border-luxury-borderSubtle pb-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-luxury-gold/15 text-luxury-goldLight border border-luxury-gold/30 text-xs uppercase tracking-widest font-bold mb-2">
+                <BarChart3 className="w-3.5 h-3.5 text-luxury-gold" />
+                Store Operations &bull; Commercial Analytics
+              </div>
+              <h3 className="font-editorial text-2xl sm:text-3xl font-bold text-luxury-ivory">
+                Executive Retail Reports &amp; Financial KPIs
+              </h3>
+              <p className="text-xs text-luxury-muted">
+                Real-time performance analytics across omnichannel store revenue, inventory asset valuation, and progressive markdown turnover.
+              </p>
+            </div>
+
+            {/* Financial Overview Metrics */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm p-5 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-luxury-muted block">Gross Retail Sales</span>
+                <span className="font-editorial text-3xl font-bold text-luxury-gold">
+                  ${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                <span className="text-[10px] text-emerald-400 block">
+                  Across {orders.filter(o => o.paymentStatus === 'paid').length} fulfilled orders
+                </span>
+              </div>
+
+              <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm p-5 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-luxury-muted block">Average Order Value (AOV)</span>
+                <span className="font-editorial text-3xl font-bold text-luxury-ivory">
+                  ${(orders.filter(o => o.paymentStatus === 'paid').length > 0 
+                      ? totalRevenue / orders.filter(o => o.paymentStatus === 'paid').length 
+                      : 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                <span className="text-[10px] text-luxury-muted block">Per completed transaction</span>
+              </div>
+
+              <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm p-5 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-luxury-muted block">Active Inventory Valuation</span>
+                <span className="font-editorial text-3xl font-bold text-luxury-goldLight">
+                  ${agingReport?.totalCurrentValue ? agingReport.totalCurrentValue.toLocaleString() : '0'}
+                </span>
+                <span className="text-[10px] text-luxury-muted block">
+                  Original Approved Base: ${agingReport?.totalOriginalValue ? agingReport.totalOriginalValue.toLocaleString() : '0'}
+                </span>
+              </div>
+
+              <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm p-5 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-luxury-muted block">Turnover Velocity</span>
+                <span className="font-editorial text-3xl font-bold text-emerald-400">
+                  {Math.round((soldProductsCount / (products.length || 1)) * 100)}% Sold
+                </span>
+                <span className="text-[10px] text-luxury-muted block">
+                  {soldProductsCount} of {products.length} catalog items sold
+                </span>
+              </div>
+            </div>
+
+            {/* Sales Channel Comparison */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm p-6 space-y-4">
+                <h4 className="text-sm font-bold text-luxury-ivory uppercase tracking-wider flex items-center gap-2">
+                  <Store className="w-4 h-4 text-luxury-gold" />
+                  Omnichannel Sales Distribution
+                </h4>
+
+                <div className="space-y-3 text-xs">
+                  {(() => {
+                    const posOrders = orders.filter(o => o.fulfillmentMethod === 'in_store_immediate' || o.id?.startsWith('PC-POS'));
+                    const onlineOrders = orders.filter(o => o.fulfillmentMethod !== 'in_store_immediate' && !o.id?.startsWith('PC-POS'));
+                    const posTotal = posOrders.reduce((acc, o) => acc + (o.total || 0), 0);
+                    const onlineTotal = onlineOrders.reduce((acc, o) => acc + (o.total || 0), 0);
+
+                    return (
+                      <>
+                        <div className="p-3 bg-luxury-charcoal/60 rounded border border-luxury-borderSubtle flex justify-between items-center">
+                          <div>
+                            <span className="font-bold text-luxury-ivory block">In-Store Register (POS Terminal &amp; Cash)</span>
+                            <span className="text-[10px] text-luxury-muted">{posOrders.length} walk-in sales</span>
+                          </div>
+                          <span className="font-editorial text-lg font-bold text-luxury-gold">
+                            ${posTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+
+                        <div className="p-3 bg-luxury-charcoal/60 rounded border border-luxury-borderSubtle flex justify-between items-center">
+                          <div>
+                            <span className="font-bold text-luxury-ivory block">Digital Storefront (Online Vault Checkout)</span>
+                            <span className="text-[10px] text-luxury-muted">{onlineOrders.length} online orders (In-Store Pickup &amp; Insured Shipping)</span>
+                          </div>
+                          <span className="font-editorial text-lg font-bold text-luxury-gold">
+                            ${onlineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Inventory Aging Distribution */}
+              <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm p-6 space-y-4">
+                <h4 className="text-sm font-bold text-luxury-ivory uppercase tracking-wider flex items-center gap-2">
+                  <TrendingDown className="w-4 h-4 text-luxury-gold" />
+                  Aging Markdown Exposure
+                </h4>
+
+                <div className="space-y-2 text-xs">
+                  {agingReport?.byTier?.map(tier => {
+                    const pctOfCatalog = Math.round((tier.count / (agingReport.totalItems || 1)) * 100);
+                    return (
+                      <div key={tier.id} className="flex items-center justify-between py-1.5 border-b border-luxury-borderSubtle/60 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-luxury-gold" />
+                          <span className="text-luxury-ivory">{tier.label}</span>
+                          <span className="text-[10px] text-luxury-muted">({tier.discountPercent}% markdown)</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-bold text-luxury-ivory">{tier.count} items</span>
+                          <span className="text-[10px] text-luxury-muted font-mono">{pctOfCatalog}%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Department Valuation Breakdown Table */}
+            <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm overflow-hidden space-y-3 p-6">
+              <h4 className="text-sm font-bold text-luxury-ivory uppercase tracking-wider">
+                Merchandise Valuation by Department
+              </h4>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-luxury-charcoal/80 text-luxury-gold text-[10px] uppercase tracking-wider border-b border-luxury-borderSubtle">
+                    <tr>
+                      <th className="p-3">Department</th>
+                      <th className="p-3">Total SKUs</th>
+                      <th className="p-3">Available</th>
+                      <th className="p-3">Sold</th>
+                      <th className="p-3">Department Inventory Value</th>
+                      <th className="p-3">Average Item Price</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-luxury-borderSubtle">
+                    {['jewelry', 'electronics', 'tools', 'instruments'].map(cat => {
+                      const catProds = products.filter(p => p.category === cat);
+                      const avail = catProds.filter(p => p.status === 'available').length;
+                      const sold = catProds.filter(p => p.status === 'sold').length;
+                      const val = catProds.reduce((acc, p) => acc + (p.price || 0), 0);
+                      const avg = catProds.length > 0 ? val / catProds.length : 0;
+                      const names = {
+                        jewelry: 'Estate Jewelry & Luxury Watches',
+                        electronics: 'Inspected Tech & Electronics',
+                        tools: 'Contractor Equipment & Tools',
+                        instruments: 'Musical Instruments & Pro Audio'
+                      };
+
+                      return (
+                        <tr key={cat} className="hover:bg-luxury-surface/30">
+                          <td className="p-3 font-medium text-luxury-ivory capitalize">{names[cat] || cat}</td>
+                          <td className="p-3 font-mono text-luxury-gold">{catProds.length}</td>
+                          <td className="p-3 text-emerald-400 font-bold">{avail}</td>
+                          <td className="p-3 text-luxury-muted">{sold}</td>
+                          <td className="p-3 font-mono font-bold text-luxury-ivory">${val.toLocaleString()}</td>
+                          <td className="p-3 font-mono text-luxury-muted">${Math.round(avg).toLocaleString()}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* ========================================================= */}
         {/* TAB 5: STAFF & ROLES (OWNER ONLY)                         */}
         {/* ========================================================= */}
         {activeTab === 'staff' && (
@@ -1123,6 +1977,136 @@ export default function Admin() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* TAB 5.5: STORE SETTINGS & SYSTEM INTEGRATIONS             */}
+        {/* ========================================================= */}
+        {activeTab === 'settings' && (
+          <div className="space-y-8 animate-fadeIn">
+            
+            <div className="border-b border-luxury-borderSubtle pb-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-luxury-gold/15 text-luxury-goldLight border border-luxury-gold/30 text-xs uppercase tracking-widest font-bold mb-2">
+                <Settings className="w-3.5 h-3.5 text-luxury-gold" />
+                Store Configuration &bull; System Health
+              </div>
+              <h3 className="font-editorial text-2xl sm:text-3xl font-bold text-luxury-ivory">
+                Store Settings &amp; Platform Integrations
+              </h3>
+              <p className="text-xs text-luxury-muted">
+                Manage business profile coordinates, payment gateway configuration, communication carrier credentials, and platform maintenance.
+              </p>
+            </div>
+
+            {/* Store Profile Card */}
+            <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm p-6 space-y-4">
+              <h4 className="text-sm font-bold text-luxury-gold uppercase tracking-wider flex items-center gap-2">
+                <Store className="w-4 h-4" />
+                Physical Store Coordinates
+              </h4>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div className="space-y-1 p-3 bg-luxury-charcoal/50 rounded border border-luxury-borderSubtle">
+                  <span className="text-luxury-muted block text-[10px] uppercase font-bold">Store Name &amp; Tagline</span>
+                  <p className="text-luxury-ivory font-bold">{STORE_INFO.name}</p>
+                  <p className="text-luxury-goldLight italic">{STORE_INFO.tagline}</p>
+                </div>
+
+                <div className="space-y-1 p-3 bg-luxury-charcoal/50 rounded border border-luxury-borderSubtle">
+                  <span className="text-luxury-muted block text-[10px] uppercase font-bold">Phone Number</span>
+                  <a href={STORE_INFO.phone.telLink} className="text-luxury-gold font-bold text-sm hover:underline">
+                    {STORE_INFO.phone.formatted}
+                  </a>
+                  <p className="text-luxury-muted text-[10px]">Direct retail counter &amp; appraisal line</p>
+                </div>
+
+                <div className="space-y-1 p-3 bg-luxury-charcoal/50 rounded border border-luxury-borderSubtle">
+                  <span className="text-luxury-muted block text-[10px] uppercase font-bold">Physical Address</span>
+                  <p className="text-luxury-ivory">{STORE_INFO.address.street}</p>
+                  <p className="text-luxury-muted">{STORE_INFO.address.city}, {STORE_INFO.address.state} {STORE_INFO.address.zip}</p>
+                </div>
+
+                <div className="space-y-1 p-3 bg-luxury-charcoal/50 rounded border border-luxury-borderSubtle">
+                  <span className="text-luxury-muted block text-[10px] uppercase font-bold">Operating Hours</span>
+                  <p className="text-luxury-ivory">Monday – Saturday: 9:30 AM – 6:00 PM</p>
+                  <p className="text-luxury-muted text-[10px]">Sunday: Closed</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Integration Status Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+              
+              {/* Payment Gateway */}
+              <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-luxury-borderSubtle pb-2">
+                  <h4 className="text-sm font-bold text-luxury-ivory uppercase tracking-wider flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-luxury-gold" />
+                    Payment Gateway (Square / Stripe)
+                  </h4>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-700/50">
+                    Sandbox / Test Mode
+                  </span>
+                </div>
+                <p className="text-luxury-muted leading-relaxed">
+                  Card tokenization active. Simulated tokens are processed with full idempotency and automatic inventory decrement. To connect live merchant accounts, provide your Square Application ID and Access Token in your production environment.
+                </p>
+                <div className="p-3 bg-luxury-charcoal/60 rounded border border-luxury-borderSubtle text-[11px] space-y-1">
+                  <span className="font-bold text-luxury-gold block">Pawn Loan Compliance Separation</span>
+                  <p className="text-luxury-muted">
+                    Regulated collateral pawn loan contracts and interest settlements are strictly restricted to in-person counter evaluations at 7040 Jimmy Carter Blvd and excluded from credit card checkout.
+                  </p>
+                </div>
+              </div>
+
+              {/* Messaging & SMS */}
+              <div className="bg-luxury-darkCard border border-luxury-borderSubtle rounded-sm p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-luxury-borderSubtle pb-2">
+                  <h4 className="text-sm font-bold text-luxury-ivory uppercase tracking-wider flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-luxury-gold" />
+                    Carrier SMS &amp; Email Engine
+                  </h4>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700/50">
+                    A2P 10DLC Compliant
+                  </span>
+                </div>
+                <p className="text-luxury-muted leading-relaxed">
+                  Transactional order receipts and pickup ready dispatches operate through our black-and-gold HTML engine. Promotional SMS requires explicit unbundled consent and handles standard STOP and HELP keywords.
+                </p>
+                <div className="p-3 bg-luxury-charcoal/60 rounded border border-luxury-borderSubtle text-[11px] space-y-1">
+                  <span className="font-bold text-luxury-gold block">PostgreSQL Database</span>
+                  <p className="text-luxury-muted font-mono">
+                    Schema: supabase_schema.sql (Production tables, RLS policies, audit triggers ready)
+                  </p>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Maintenance & Reset Box */}
+            <div className="bg-luxury-darkCard border border-red-900/30 rounded-sm p-6 space-y-4">
+              <div className="flex items-center gap-2 text-red-400 font-bold text-sm uppercase tracking-wider">
+                <AlertTriangle className="w-4 h-4" />
+                <span>Demonstration Platform Maintenance</span>
+              </div>
+              <p className="text-xs text-luxury-muted max-w-xl">
+                Reset all catalog items, order records, customer accounts, audit logs, and markdown history back to the initial factory seed state.
+              </p>
+              <button
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to reset the entire database to the default demonstration seed? All local test changes will be refreshed.")) {
+                    resetDemoData();
+                    setFeedbackMsg("Platform reset to factory demo seed state.");
+                    setTimeout(() => setFeedbackMsg(''), 4000);
+                  }
+                }}
+                className="px-4 py-2 bg-red-950/80 border border-red-700/60 text-red-200 hover:bg-red-900 font-bold text-xs uppercase tracking-wider rounded transition-colors"
+              >
+                Reset Database to Factory Seed State
+              </button>
             </div>
 
           </div>
@@ -1576,6 +2560,86 @@ export default function Admin() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: MANUAL PRICE OVERRIDE                              */}
+      {/* ========================================================= */}
+      {overrideModalOpen && overrideProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-luxury-black/90 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-luxury-darkCard border border-luxury-gold rounded-sm p-6 max-w-md w-full space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-luxury-borderSubtle pb-3">
+              <h4 className="font-editorial text-lg font-bold text-luxury-ivory flex items-center gap-2">
+                <Tag className="w-4 h-4 text-luxury-gold" />
+                Manual Price Override
+              </h4>
+              <button onClick={() => setOverrideModalOpen(false)} className="text-luxury-muted hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-luxury-charcoal rounded flex items-center gap-3 text-xs">
+              <img src={overrideProduct.primaryImage || overrideProduct.image} alt="" className="w-12 h-12 object-cover rounded shrink-0" />
+              <div>
+                <span className="font-bold text-luxury-ivory block line-clamp-1">{overrideProduct.title}</span>
+                <span className="text-[10px] text-luxury-muted font-mono">{overrideProduct.sku}</span>
+                <span className="text-[10px] text-luxury-gold block">
+                  Original Base: ${(overrideProduct.originalApprovedPrice || overrideProduct.price).toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSavePriceOverride} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-[11px] uppercase font-bold text-luxury-muted mb-1">
+                  New Selling Price ($)
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  required
+                  value={overridePriceVal}
+                  onChange={(e) => setOverridePriceVal(e.target.value)}
+                  className="w-full bg-luxury-charcoal border border-luxury-gold rounded px-3 py-2 text-luxury-gold font-mono font-bold text-sm outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] uppercase font-bold text-luxury-muted mb-1">
+                  Reason for Override (Audit Logged)
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., Manager counter markdown, condition adjustment, customer promotion"
+                  value={overrideReasonVal}
+                  onChange={(e) => setOverrideReasonVal(e.target.value)}
+                  className="w-full bg-luxury-charcoal border border-luxury-borderSubtle rounded px-3 py-2 text-luxury-ivory outline-none focus:border-luxury-gold"
+                />
+              </div>
+
+              <div className="p-3 rounded bg-luxury-gold/10 border border-luxury-gold/30 text-[11px] text-luxury-goldLight">
+                This manual override updates the customer-facing price immediately and records an immutable entry into the audit trail.
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-luxury-borderSubtle">
+                <button
+                  type="button"
+                  onClick={() => setOverrideModalOpen(false)}
+                  className="px-4 py-2 border border-luxury-borderSubtle text-luxury-muted uppercase"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-luxury-gold text-luxury-black font-bold uppercase hover:brightness-110"
+                >
+                  Save Override
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
