@@ -18,6 +18,8 @@ import SellToUs from './pages/SellToUs';
 import PawnLoans from './pages/PawnLoans';
 import About from './pages/About';
 import Contact from './pages/Contact';
+import NewArrivals from './pages/NewArrivals';
+import Unsubscribe from './pages/Unsubscribe';
 
 // Commerce & Admin Pages
 import Checkout from './pages/Checkout';
@@ -101,6 +103,14 @@ export default function App() {
         title = "Contact & Directions | Peachtree Corners Loan & Pawn";
         desc = "Store address, phone number (678-691-1692), directions, and inquiry form for Peachtree Corners Loan & Pawn.";
         break;
+      case '/new-arrivals':
+        title = "Just Came In: New Arrivals | Peachtree Corners Loan & Pawn";
+        desc = "Browse the newest daily arrivals, estate jewelry, watches, tools, and electronics at Peachtree Corners Loan & Pawn.";
+        break;
+      case '/unsubscribe':
+        title = "Email & SMS Preferences | Peachtree Corners Loan & Pawn";
+        desc = "Manage communication preferences or unsubscribe from marketing updates.";
+        break;
       default:
         title = "Peachtree Corners Loan & Pawn | Value Worth Discovering";
         break;
@@ -163,6 +173,10 @@ export default function App() {
         return <About />;
       case '/contact':
         return <Contact />;
+      case '/new-arrivals':
+        return <NewArrivals onSelectProduct={handleSelectProduct} onInquireProduct={handleInquireProduct} />;
+      case '/unsubscribe':
+        return <Unsubscribe />;
       case '/':
       default:
         return <Home onSelectProduct={handleSelectProduct} onInquireProduct={handleInquireProduct} />;
