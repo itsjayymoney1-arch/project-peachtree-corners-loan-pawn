@@ -1,6 +1,6 @@
 // Transactional & Marketing Email Service for Peachtree Corners Loan & Pawn
-import { STORE_INFO } from '../data/storeInfo';
-import { dbService } from './db';
+import { STORE_INFO } from '../data/storeInfo.js';
+import { dbService } from './db.js';
 
 // Luxury Black & Gold Email HTML Template Wrapper
 function wrapLuxuryEmailTemplate(contentHtml, title = "Peachtree Corners Loan & Pawn") {

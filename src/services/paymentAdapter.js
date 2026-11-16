@@ -1,8 +1,8 @@
 // Payment Provider Abstraction Layer for Peachtree Corners Loan & Pawn
 // Supports Square, Stripe Sandbox, and Demonstration Tokenized Checkout
-import { dbService } from './db';
-import { emailService } from './emailService';
-import { smsService } from './smsService';
+import { dbService } from './db.js';
+import { emailService } from './emailService.js';
+import { smsService } from './smsService.js';
 
 export const TEST_CARDS = [
   {
