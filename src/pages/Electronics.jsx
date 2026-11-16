@@ -20,12 +20,21 @@ export default function Electronics({ onSelectProduct, onInquireProduct }) {
   const { navigate } = useRouter();
   const { products } = useApp();
   const [selectedSubcat, setSelectedSubcat] = useState('all');
+  const [priceRange, setPriceRange] = useState('all');
 
   const elecProducts = products.filter(p => p.category === 'electronics' && p.status !== 'draft' && p.status !== 'archived');
 
-  const filtered = selectedSubcat === 'all'
-    ? elecProducts
-    : elecProducts.filter(p => p.subcategory?.toLowerCase().includes(selectedSubcat.toLowerCase()));
+  const filtered = elecProducts.filter(p => {
+    if (selectedSubcat !== 'all' && !p.subcategory?.toLowerCase().includes(selectedSubcat.toLowerCase())) {
+      return false;
+    }
+    const price = p.price || 0;
+    if (priceRange === 'under-100' && price >= 100) return false;
+    if (priceRange === '100-300' && (price < 100 || price > 300)) return false;
+    if (priceRange === '300-600' && (price < 300 || price > 600)) return false;
+    if (priceRange === 'over-600' && price <= 600) return false;
+    return true;
+  });
 
   const subcategories = [
     { id: 'all', label: 'All Electronics' },
@@ -34,6 +43,14 @@ export default function Electronics({ onSelectProduct, onInquireProduct }) {
     { id: 'audio', label: 'Audio & Headphones' },
     { id: 'gaming', label: 'Gaming Consoles' },
     { id: 'camera', label: 'Cameras & Video' },
+  ];
+
+  const priceRanges = [
+    { id: 'all', label: 'All Prices' },
+    { id: 'under-100', label: 'Under $100' },
+    { id: '100-300', label: '$100 – $300' },
+    { id: '300-600', label: '$300 – $600' },
+    { id: 'over-600', label: '$600+' },
   ];
 
   return (
@@ -120,20 +137,35 @@ export default function Electronics({ onSelectProduct, onInquireProduct }) {
             </h2>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {subcategories.map(sub => (
-              <button
-                key={sub.id}
-                onClick={() => setSelectedSubcat(sub.id)}
-                className={`px-3.5 py-1.5 rounded-sm text-xs uppercase tracking-wider transition-all ${
-                  selectedSubcat === sub.id
-                    ? 'bg-luxury-gold text-luxury-black font-semibold shadow-gold-glow'
-                    : 'bg-luxury-charcoal text-luxury-muted hover:text-luxury-ivory border border-luxury-borderSubtle'
-                }`}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap gap-2">
+              {subcategories.map(sub => (
+                <button
+                  key={sub.id}
+                  onClick={() => setSelectedSubcat(sub.id)}
+                  className={`px-3.5 py-1.5 rounded-sm text-xs uppercase tracking-wider transition-all ${
+                    selectedSubcat === sub.id
+                      ? 'bg-luxury-gold text-luxury-black font-semibold shadow-gold-glow'
+                      : 'bg-luxury-charcoal text-luxury-muted hover:text-luxury-ivory border border-luxury-borderSubtle'
+                  }`}
+                >
+                  {sub.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 pl-2 border-l border-luxury-borderSubtle">
+              <span className="text-[11px] uppercase tracking-wider text-luxury-muted whitespace-nowrap">Price:</span>
+              <select
+                value={priceRange}
+                onChange={(e) => setPriceRange(e.target.value)}
+                className="px-2.5 py-1.5 bg-luxury-charcoal border border-luxury-borderSubtle rounded-sm text-xs text-luxury-ivory focus:outline-none focus:border-luxury-gold"
               >
-                {sub.label}
-              </button>
-            ))}
+                {priceRanges.map(pr => (
+                  <option key={pr.id} value={pr.id}>{pr.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
