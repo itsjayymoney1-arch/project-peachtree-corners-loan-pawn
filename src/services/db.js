@@ -83,6 +83,115 @@ const INITIAL_CUSTOMERS = [
   }
 ];
 
+// Initial active pawn loans (Hi-Tech Pawn Software sync records)
+export const INITIAL_PAWN_LOANS = [
+  {
+    id: 'pawn-loan-01',
+    ticketNumber: 'HT-88412',
+    customerName: 'David Harrison',
+    customerPhone: '(404) 555-0192',
+    customerEmail: 'customer@peachtreecorners.demo',
+    itemDescription: "Men's Rolex Submariner Date 16610 (Black Dial / Oyster Bracelet)",
+    category: 'jewelry',
+    serialNumber: 'Z894210',
+    principalAmount: 2500.00,
+    monthlyInterestFee: 250.00,
+    datePawned: '2026-10-25T11:00:00Z',
+    dueDate: '2026-11-24T23:59:59Z', // Due in ~4 days
+    gracePeriodDays: 30,
+    gracePeriodEndDate: '2026-12-24T23:59:59Z',
+    status: 'due_soon',
+    renewalCount: 0,
+    lastReminderSent: null,
+    remindersHistory: [],
+    paymentHistory: []
+  },
+  {
+    id: 'pawn-loan-02',
+    ticketNumber: 'HT-88429',
+    customerName: 'Maria Rodriguez',
+    customerPhone: '(404) 555-0814',
+    customerEmail: 'm.rodriguez@gmail.com',
+    itemDescription: '14K Solid Yellow Gold 8mm Cuban Link Chain 24" (68.4g)',
+    category: 'jewelry',
+    serialNumber: 'GOLD-CUB-68',
+    principalAmount: 1400.00,
+    monthlyInterestFee: 140.00,
+    datePawned: '2026-10-20T14:30:00Z',
+    dueDate: '2026-11-20T23:59:59Z', // Due TODAY!
+    gracePeriodDays: 30,
+    gracePeriodEndDate: '2026-12-20T23:59:59Z',
+    status: 'due_today',
+    renewalCount: 0,
+    lastReminderSent: null,
+    remindersHistory: [],
+    paymentHistory: []
+  },
+  {
+    id: 'pawn-loan-03',
+    ticketNumber: 'HT-88390',
+    customerName: 'James Thornton',
+    customerPhone: '(678) 555-0431',
+    customerEmail: 'james.thornton@atlanta.net',
+    itemDescription: 'Gibson Custom 1959 Les Paul Standard Reissue (Cherry Sunburst)',
+    category: 'musical_instruments',
+    serialNumber: '9-3104',
+    principalAmount: 1800.00,
+    monthlyInterestFee: 180.00,
+    datePawned: '2026-09-15T10:15:00Z',
+    dueDate: '2026-10-15T23:59:59Z', // Past due!
+    gracePeriodDays: 30,
+    gracePeriodEndDate: '2026-11-25T23:59:59Z', // In grace period (5 days remaining!)
+    status: 'grace_period',
+    renewalCount: 1,
+    lastReminderSent: null,
+    remindersHistory: [],
+    paymentHistory: []
+  },
+  {
+    id: 'pawn-loan-04',
+    ticketNumber: 'HT-88465',
+    customerName: 'Robert Chen',
+    customerPhone: '(770) 555-0923',
+    customerEmail: 'rchen.contracting@yahoo.com',
+    itemDescription: 'DeWalt 20V MAX Brushless 6-Tool Combo Kit + Rolling Case',
+    category: 'tools',
+    serialNumber: 'DW-88910',
+    principalAmount: 450.00,
+    monthlyInterestFee: 50.00,
+    datePawned: '2026-11-05T13:00:00Z',
+    dueDate: '2026-12-05T23:59:59Z', // Active, due in ~15 days
+    gracePeriodDays: 30,
+    gracePeriodEndDate: '2027-01-05T23:59:59Z',
+    status: 'active',
+    renewalCount: 0,
+    lastReminderSent: null,
+    remindersHistory: [],
+    paymentHistory: []
+  },
+  {
+    id: 'pawn-loan-05',
+    ticketNumber: 'HT-88471',
+    customerName: 'Angela Simmons',
+    customerPhone: '(404) 555-0377',
+    customerEmail: 'angela.simmons@gmail.com',
+    itemDescription: 'Apple MacBook Pro 16" M3 Max (36GB RAM / 1TB SSD / Space Black)',
+    category: 'electronics',
+    serialNumber: 'C02Z891KMD6T',
+    principalAmount: 1200.00,
+    monthlyInterestFee: 120.00,
+    datePawned: '2026-11-12T16:45:00Z',
+    dueDate: '2026-12-12T23:59:59Z', // Active, due in ~22 days
+    gracePeriodDays: 30,
+    gracePeriodEndDate: '2027-01-12T23:59:59Z',
+    status: 'active',
+    renewalCount: 0,
+    lastReminderSent: null,
+    remindersHistory: [],
+    paymentHistory: []
+  }
+];
+
 // Seed inventory transformed into full-stack commerce records
 function generateInitialProducts() {
   return DEMO_PRODUCTS.map((item, index) => {
@@ -594,7 +703,20 @@ function createDefaultDatabase() {
       }
     ],
     // In-memory active reservations map { productId: { cartId, quantity, expiresAt } }
-    reservations: {}
+    reservations: {},
+    pawnLoans: INITIAL_PAWN_LOANS,
+    hiTechSettings: DEFAULT_HITECH_SETTINGS,
+    pawnPayments: [],
+    pawnSyncLogs: [
+      {
+        id: 'sync-init-01',
+        type: 'TWO_WAY_POS_SYNC',
+        recordsProcessed: 28,
+        timestamp: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+        status: 'success',
+        summary: 'Automated 15-minute background sync with Hi-Tech POS (Station PC-STATION-01). 5 active pawn loans and 23 catalog products reconciled.'
+      }
+    ]
   };
 }
 
@@ -648,6 +770,31 @@ export const dbService = {
           lastRunAt: null,
           lastRunBy: 'system',
         };
+        changed = true;
+      }
+      if (!parsed.pawnLoans) {
+        parsed.pawnLoans = INITIAL_PAWN_LOANS;
+        changed = true;
+      }
+      if (!parsed.hiTechSettings) {
+        parsed.hiTechSettings = DEFAULT_HITECH_SETTINGS;
+        changed = true;
+      }
+      if (!parsed.pawnPayments) {
+        parsed.pawnPayments = [];
+        changed = true;
+      }
+      if (!parsed.pawnSyncLogs) {
+        parsed.pawnSyncLogs = [
+          {
+            id: 'sync-init-01',
+            type: 'TWO_WAY_POS_SYNC',
+            recordsProcessed: 28,
+            timestamp: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+            status: 'success',
+            summary: 'Automated 15-minute background sync with Hi-Tech POS (Station PC-STATION-01). 5 active pawn loans and 23 catalog products reconciled.'
+          }
+        ];
         changed = true;
       }
       if (changed) {

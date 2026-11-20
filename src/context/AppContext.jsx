@@ -4,6 +4,7 @@ import { emailService } from '../services/emailService';
 import { smsService } from '../services/smsService';
 import { paymentAdapter } from '../services/paymentAdapter';
 import { runMarkdownEngine as markdownEngineRun, getInventoryAgingStats, DEFAULT_MARKDOWN_TIERS } from '../services/markdownEngine';
+import { hiTechPawnService } from '../services/hiTechPawnService';
 
 const AppContext = createContext(null);
 
