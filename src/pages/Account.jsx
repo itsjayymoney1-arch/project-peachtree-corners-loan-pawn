@@ -16,7 +16,10 @@ import {
   KeyRound, 
   Trash2,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  Landmark,
+  DollarSign,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function Account() {
