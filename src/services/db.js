@@ -2,6 +2,7 @@
 import { DEMO_PRODUCTS } from '../data/inventory.js';
 import { STORE_INFO } from '../data/storeInfo.js';
 import { DEFAULT_MARKDOWN_TIERS, getCurrentTier, calculateMarkdownPrice } from './markdownEngine.js';
+import { DEFAULT_HITECH_SETTINGS } from './hiTechPawnService.js';
 
 const DB_STORAGE_KEY = 'pc_vault_database_v2';
 
