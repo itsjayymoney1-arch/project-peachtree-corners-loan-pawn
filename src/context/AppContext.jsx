@@ -872,6 +872,52 @@ export function AppProvider({ children }) {
     });
   }, [checkPermission, currentAdmin, reloadDb]);
 
+  // Hi-Tech Pawn POS & Automated Loan Reminders
+  const runPawnReminderCycle = useCallback(() => {
+    const res = hiTechPawnService.runReminderCycle(currentAdmin);
+    reloadDb();
+    return res;
+  }, [currentAdmin, reloadDb]);
+
+  const sendSinglePawnReminder = useCallback((ticketId, channel = 'both') => {
+    const res = hiTechPawnService.sendSingleReminder(ticketId, channel, currentAdmin);
+    reloadDb();
+    return res;
+  }, [currentAdmin, reloadDb]);
+
+  const extendPawnLoan = useCallback(async ({ ticketId, paidAmount, paymentMethod = 'card_online', paymentTransactionId, cardDetails, actor }) => {
+    let txnId = paymentTransactionId;
+    if (paymentMethod === 'card_online' && cardDetails) {
+      const tokenRes = await paymentAdapter.tokenizePayment(cardDetails);
+      txnId = tokenRes.token;
+    }
+    const res = hiTechPawnService.extendPawnLoan({
+      ticketId,
+      paidAmount,
+      paymentMethod,
+      paymentTransactionId: txnId,
+      actor: actor || (customerUser ? { name: `${customerUser.firstName} ${customerUser.lastName}`, email: customerUser.email, role: 'CUSTOMER' } : currentAdmin)
+    });
+    reloadDb();
+    return res;
+  }, [customerUser, currentAdmin, reloadDb]);
+
+  const syncHiTechPos = useCallback(() => {
+    const res = hiTechPawnService.syncWithHiTechPos(currentAdmin);
+    reloadDb();
+    return res;
+  }, [currentAdmin, reloadDb]);
+
+  const updateHiTechSettings = useCallback((newSettings) => {
+    const res = hiTechPawnService.updateSettings(newSettings, currentAdmin);
+    reloadDb();
+    return res;
+  }, [currentAdmin, reloadDb]);
+
+  const lookupPawnTicket = useCallback((ticketNumber, identifier) => {
+    return hiTechPawnService.lookupTicket(ticketNumber, identifier);
+  }, []);
+
   // Reset database to default seed
   const resetDemoData = useCallback(() => {
     const fresh = dbService.resetToDefault();
@@ -894,6 +940,18 @@ export function AppProvider({ children }) {
         campaigns: db.campaigns || [],
         notificationLogs: db.notificationLogs || [],
         auditLogs: db.auditLogs || [],
+        pawnLoans: db.pawnLoans || [],
+        hiTechSettings: db.hiTechSettings || null,
+        pawnPayments: db.pawnPayments || [],
+        pawnSyncLogs: db.pawnSyncLogs || [],
+
+        // Hi-Tech Pawn & Loans
+        runPawnReminderCycle,
+        sendSinglePawnReminder,
+        extendPawnLoan,
+        syncHiTechPos,
+        updateHiTechSettings,
+        lookupPawnTicket,
 
         // Customer Auth
         customerUser,
