@@ -17,6 +17,7 @@ import { paymentAdapter } from './src/services/paymentAdapter.js';
 import { aiVisionService } from './src/services/aiVisionService.js';
 import { emailService } from './src/services/emailService.js';
 import { smsService } from './src/services/smsService.js';
+import { hiTechPawnService } from './src/services/hiTechPawnService.js';
 
 let passed = 0;
 let failed = 0;
@@ -226,6 +227,53 @@ assert(stopReply.optedOut === true, 'SMS Engine: Automatically processes STOP ke
 
 const helpReply = smsService.handleIncomingKeyword('404-555-0100', 'HELP');
 assert(helpReply.reply.includes('678-691-1692') || helpReply.reply.includes('pawnshopnorcross.com'), 'SMS Engine: HELP keyword replies with verified store contact information');
+
+console.log('\n--- TEST GROUP 6: HI-TECH PAWN INTEGRATION & AUTOMATED LOAN REMINDERS ---');
+
+// 1. Hi-Tech POS Two-Way Synchronization
+const syncRes = hiTechPawnService.syncWithHiTechPos({ name: 'System Test', email: 'test@local', role: 'SYSTEM' });
+assert(syncRes.success === true, 'Hi-Tech Integration: Two-way sync with POS completes successfully');
+assert(syncRes.activeLoansCount >= 5, 'Hi-Tech Integration: Active pawn loans reconciled from POS master ledger');
+
+// 2. Ticket Lookup
+const foundTicket = hiTechPawnService.lookupTicket('HT-88412');
+assert(foundTicket !== null && foundTicket.ticketNumber === 'HT-88412', 'Pawn Portal: Look up ticket #HT-88412 succeeds');
+assert(foundTicket.customerName === 'David Harrison', 'Pawn Portal: Correct customer profile attached to ticket');
+assert(foundTicket.monthlyInterestFee === 250, 'Pawn Portal: Calculates exact monthly extension fee of $250.00');
+
+// 3. Due Date & Grace Period Status Calculations
+const statusToday = hiTechPawnService.calculateTicketStatus(
+  { ...foundTicket, dueDate: new Date().toISOString(), gracePeriodEndDate: new Date(Date.now() + 30 * 86400000).toISOString() },
+  new Date()
+);
+assert(statusToday === 'due_today', 'Status Engine: Correctly evaluates ticket due today as due_today');
+
+const statusGrace = hiTechPawnService.calculateTicketStatus(
+  { ...foundTicket, dueDate: new Date(Date.now() - 5 * 86400000).toISOString(), gracePeriodEndDate: new Date(Date.now() + 25 * 86400000).toISOString() },
+  new Date()
+);
+assert(statusGrace === 'grace_period', 'Status Engine: Correctly evaluates past-due ticket within 30-day window as grace_period');
+
+// 4. Automated Reminder Cycle Run
+const reminderRun = hiTechPawnService.runReminderCycle({ name: 'Automated Test Scheduler', email: 'scheduler@test.pawn', role: 'SYSTEM' });
+assert(reminderRun.success === true, 'Reminder Engine: Automated reminder cycle completes without error');
+assert(reminderRun.recordsEvaluated >= 5, 'Reminder Engine: Evaluated all active pawn tickets');
+
+// 5. 30-Day Loan Extension Payment
+const originalDueDate = new Date(foundTicket.dueDate);
+const extensionRes = hiTechPawnService.extendPawnLoan({
+  ticketId: foundTicket.id,
+  paidAmount: 250.00,
+  paymentMethod: 'card_online',
+  paymentTransactionId: 'tok_test_sq_loan_ext',
+  actor: { name: 'David Harrison', email: 'customer@peachtreecorners.demo', role: 'CUSTOMER' }
+});
+
+assert(extensionRes.success === true, 'Loan Extension: Monthly fee payment succeeds');
+const extendedDueDate = new Date(extensionRes.ticket.dueDate);
+const diffDays = Math.round((extendedDueDate - originalDueDate) / (1000 * 60 * 60 * 24));
+assert(diffDays === 30, 'Loan Extension: Advances maturity due date by exactly 30 calendar days');
+assert(extensionRes.payment.syncedToHiTech === true, 'Loan Extension: Automatically queues and logs payment to Hi-Tech POS ledger');
 
 console.log('\n========================================================');
 console.log(`TEST SUMMARY: ${passed} PASSED, ${failed} FAILED`);
