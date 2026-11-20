@@ -324,3 +324,86 @@ CREATE POLICY "Customers view and update own profile" ON customer_profiles
 -- Audit Logs RLS: Only Super Admin / Owner can inspect audit logs
 CREATE POLICY "Owners can view audit logs" ON audit_logs
   FOR SELECT USING (auth.jwt() ->> 'role' = 'OWNER');
+
+-- ====================================================================
+-- 12. HI-TECH PAWN POS INTEGRATION & COLLATERAL LOANS
+-- ====================================================================
+
+CREATE TYPE pawn_loan_status AS ENUM (
+  'active',
+  'due_soon',
+  'due_today',
+  'grace_period',
+  'extended',
+  'redeemed',
+  'forfeited'
+);
+
+CREATE TABLE pawn_loans (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  ticket_number VARCHAR(50) UNIQUE NOT NULL,
+  customer_name VARCHAR(255) NOT NULL,
+  customer_phone VARCHAR(50),
+  customer_email VARCHAR(255),
+  item_description TEXT NOT NULL,
+  category VARCHAR(50) DEFAULT 'jewelry',
+  serial_number VARCHAR(100),
+  principal_amount NUMERIC(10, 2) NOT NULL,
+  monthly_interest_fee NUMERIC(10, 2) NOT NULL,
+  date_pawned TIMESTAMPTZ NOT NULL,
+  due_date TIMESTAMPTZ NOT NULL,
+  grace_period_days INT DEFAULT 30,
+  grace_period_end_date TIMESTAMPTZ NOT NULL,
+  status pawn_loan_status DEFAULT 'active',
+  renewal_count INT DEFAULT 0,
+  last_reminder_sent_at TIMESTAMPTZ,
+  last_reminder_type VARCHAR(50),
+  hitech_station_id VARCHAR(50) DEFAULT 'PC-STATION-01',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE pawn_loan_payments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  loan_id UUID REFERENCES pawn_loans(id) ON DELETE CASCADE,
+  ticket_number VARCHAR(50) NOT NULL,
+  amount NUMERIC(10, 2) NOT NULL,
+  payment_type VARCHAR(50) DEFAULT 'monthly_extension_fee', -- 'monthly_extension_fee', 'full_redemption'
+  payment_method VARCHAR(50) DEFAULT 'card_online',
+  transaction_id VARCHAR(100),
+  old_due_date TIMESTAMPTZ,
+  new_due_date TIMESTAMPTZ,
+  synced_to_hitech BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE pawn_sync_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  sync_type VARCHAR(100) NOT NULL, -- 'TWO_WAY_POS_SYNC', 'LOAN_REMINDER_CYCLE', 'POS_PAYMENT_SYNC'
+  station_id VARCHAR(50) DEFAULT 'PC-STATION-01',
+  records_processed INT DEFAULT 0,
+  status VARCHAR(50) DEFAULT 'success',
+  summary TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_pawn_loans_ticket ON pawn_loans(ticket_number);
+CREATE INDEX idx_pawn_loans_due_date ON pawn_loans(due_date);
+CREATE INDEX idx_pawn_loans_status ON pawn_loans(status);
+CREATE INDEX idx_pawn_loans_phone ON pawn_loans(customer_phone);
+CREATE INDEX idx_pawn_loans_email ON pawn_loans(customer_email);
+CREATE INDEX idx_pawn_payments_ticket ON pawn_loan_payments(ticket_number);
+
+ALTER TABLE pawn_loans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pawn_loan_payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pawn_sync_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public can lookup own pawn loans by ticket" ON pawn_loans
+  FOR SELECT USING (true);
+
+CREATE POLICY "Staff can manage all pawn loans" ON pawn_loans
+  FOR ALL USING (auth.jwt() ->> 'role' IN ('OWNER', 'INVENTORY_MANAGER', 'ORDER_MANAGER'));
+
+CREATE POLICY "Staff can view sync logs" ON pawn_sync_logs
+  FOR SELECT USING (auth.jwt() ->> 'role' IN ('OWNER', 'INVENTORY_MANAGER'));
+
