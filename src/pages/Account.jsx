@@ -27,6 +27,7 @@ export default function Account() {
   const { 
     customerUser, 
     orders, 
+    pawnLoans = [],
     logoutCustomer, 
     updateCustomerProfile, 
     updateMarketingPreferences, 
@@ -75,6 +76,12 @@ export default function Account() {
   const customerOrders = orders.filter(o => 
     (o.customerId && o.customerId === customerUser.id) ||
     (o.customerEmail && o.customerEmail.toLowerCase() === customerUser.email.toLowerCase())
+  );
+
+  // Filter active pawn loans for THIS customer
+  const customerLoans = pawnLoans.filter(l => 
+    (customerUser?.email && l.customerEmail?.toLowerCase() === customerUser.email.toLowerCase()) ||
+    (customerUser?.phone && l.customerPhone && l.customerPhone.replace(/[^0-9]/g, '').endsWith(customerUser.phone.replace(/[^0-9]/g, '').slice(-7)))
   );
 
   const handleSaveProfile = (e) => {
