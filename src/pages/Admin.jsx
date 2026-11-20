@@ -59,6 +59,7 @@ export default function Admin() {
     campaigns, 
     auditLogs, 
     notificationLogs,
+    pawnLoans = [],
     currentAdmin, 
     switchAdminRole, 
     checkPermission, 
@@ -417,6 +418,7 @@ export default function Admin() {
             { id: 'inventory', label: `Inventory (${products.length})`, icon: Package },
             { id: 'markdown', label: 'Aging & Markdowns', icon: TrendingDown },
             { id: 'orders', label: `Orders (${orders.length})`, icon: ShoppingBag },
+            { id: 'pawn', label: `Hi-Tech Pawn & Loans (${pawnLoans.length})`, icon: Landmark },
             { id: 'customers', label: `Customers (${customers.length})`, icon: Users },
             { id: 'marketing', label: 'Vault Weekly & Campaigns', icon: Megaphone },
             { id: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
@@ -1325,6 +1327,15 @@ export default function Admin() {
               </table>
             </div>
 
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* TAB 3.4: HI-TECH PAWN POS & COLLATERAL LOANS              */}
+        {/* ========================================================= */}
+        {activeTab === 'pawn' && (
+          <div className="animate-fadeIn">
+            <HiTechPawnAdminTab />
           </div>
         )}
 
