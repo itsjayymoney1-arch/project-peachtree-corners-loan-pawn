@@ -135,7 +135,7 @@ assert(jewelryAging.discountPercent === 0, 'Category Rule Override: Custom categ
 console.log('\n--- TEST GROUP 2: INVENTORY & QUICK ADD AI INTAKE ---');
 // AI Vision Analysis Test
 const aiResult = await aiVisionService.analyzeProductPhotos([
-  'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1000&q=80'
+  'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1000&q=80&keyword=watch'
 ]);
 assert(aiResult.suggestedTitle.length > 5, 'Quick Add AI: Vision analyzer generates structured title');
 assert(aiResult.suggestedCategory === 'jewelry', 'Quick Add AI: Categorizes watch photo as jewelry');
