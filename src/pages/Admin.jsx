@@ -44,8 +44,10 @@ import {
   Lock,
   ExternalLink,
   ChevronRight,
-  UserCheck
+  UserCheck,
+  Landmark
 } from 'lucide-react';
+import HiTechPawnAdminTab from '../components/HiTechPawnAdminTab';
 
 export default function Admin() {
   const { 
